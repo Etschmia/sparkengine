@@ -1,0 +1,14 @@
+[package]
+name = "funken"
+version = "1.0.0"
+edition = "2021"
+description = "Funken - eigenstaendige UCI-Schachengine (Mailbox-Board, Alpha-Beta-Suche, eigene Bewertung)"
+authors = ["Muse Spark"]
+license = "MIT"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+
+[dependencies]

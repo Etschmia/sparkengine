@@ -1,0 +1,103 @@
+# Funken-Beispielkonfiguration fuer die offizielle Bridge
+# lichess-bot (https://github.com/lichess-bot-devs/lichess-bot).
+#
+# WICHTIG:
+# - Kein Geheimnis in diese Datei schreiben. Das Bot-Token wird zur Laufzeit
+#   aus der Umgebungsvariable LICHESS_TOKEN gelesen (siehe start.sh bzw.
+#   das systemd-Unit funken.service mit EnvironmentFile).
+# - Alle fremden Zugquellen sind bewusst DEAKTIVIERT: keine Eroeffnungsbuecher
+#   (lokal/online), keine Cloud-Analyse, keine Endspieldatenbanken, kein
+#   Ponder. Jeder Zug stammt aus Funkens eigener Berechnung.
+# - Aufgeben/Remis-Anbieten durch die Bridge ist deaktiviert: Die Engine
+#   kennt kein Resign/Draw-Offer per UCI; Partien enden durch Matt oder die
+#   offiziellen Remisregeln, die Lichess selbst adjudiziert.
+#
+# Basis: config.yml.default der Bridge (Stand September 2026), reduziert und
+# kommentiert. Unbekannte Felder wurden entfernt; Standardwerte der Bridge
+# gelten, wo nichts steht.
+
+token: "HIER_BOT_TOKEN_EINTRAGEN"  # Platzhalter! Bevorzugt: Umgebungsvariable
+  # LICHESS_BOT_TOKEN setzen (von der Bridge offiziell unterstuetzt, hat
+  # Vorrang vor diesem Feld). Diese Beispieldatei enthaelt nie ein echtes Token.
+url: "https://lichess.org/"
+
+engine:
+  dir: "/opt/funken/"      # Installationsverzeichnis (siehe ../README.md).
+  name: "funken"           # Das Engine-Binary (UCI).
+  protocol: "uci"
+  ponder: false            # Funken unterstuetzt kein Ponder.
+  working_dir: ""
+  silence_stderr: false
+
+  polyglot:
+    enabled: false         # KEIN fremdes Eroeffnungsbuch.
+
+  draw_or_resign:
+    resign_enabled: false      # Kein fremdes Aufgeben.
+    offer_draw_enabled: false  # Kein fremdes Remis-Anbieten/Annehmen.
+
+  online_moves:
+    max_out_of_book_moves: 10
+    max_retries: 0
+    chessdb_book:
+      enabled: false
+    lichess_cloud_analysis:
+      enabled: false       # KEINE Cloud-Analyse.
+    lichess_opening_explorer:
+      enabled: false
+    online_egtb:
+      enabled: false       # KEINE Online-Tablebases.
+
+  lichess_bot_tbs:
+    syzygy:
+      enabled: false
+    gaviota:
+      enabled: false
+
+  uci_options:
+    Move Overhead: 100     # Engine-interne Zeitreserve in ms.
+    Threads: 1             # Funken ist single-threaded (fix).
+    Hash: 256              # Transpositionstabelle in MB (Zielrechner: 2 vCPU / ~4 GB RAM).
+
+abort_time: 30
+move_overhead: 1000        # Zusaetzliche Zeitreserve der Bridge (Netz/Latenz).
+quit_after_all_games_finish: true
+max_takebacks_accepted: 0
+correspondence:
+  move_time: 60
+  checkin_period: 300
+  disconnect_time: 150
+  ponder: false
+
+challenge:
+  concurrency: 1           # Genau eine Partie (single-threaded Engine).
+  accept_bot: true
+  only_bot: false
+  max_increment: 30
+  min_increment: 0
+  max_base: 1800
+  min_base: 60             # Keine Ultrabullet-/Bullet-0+1-Hektik zum Start.
+  max_days: 14
+  min_days: 1
+  variants:
+    - standard             # Nur normales Schach (einzige unterstuetzte Variante).
+  time_controls:
+    - blitz
+    - rapid
+    - classical
+  modes:
+    - casual               # Testphase: nur freie Partien. Spaeter ggf. + rated.
+  bullet_requires_increment: false
+  max_simultaneous_games_per_user: 2
+
+greeting:
+  hello: "Hi! I'm Funken, an original engine written from scratch. Good luck!"
+  goodbye: "Good game!"
+  hello_spectators: "Hi! I'm Funken, an original engine written from scratch."
+  goodbye_spectators: "Thanks for watching!"
+
+pgn_directory: "games"    # Partien werden lokal als PGN archiviert.
+pgn_file_grouping: "game"
+
+matchmaking:
+  allow_matchmaking: false # Keine automatischen Herausforderungen zum Start.

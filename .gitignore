@@ -1,0 +1,6 @@
+/target
+__pycache__/
+*.pyc
+lichess_bot_auto_logs/
+games/
+.venv/

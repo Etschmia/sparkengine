@@ -1,0 +1,36 @@
+# systemd-Unit fuer den Funken-Lichess-Bot (Beispiel).
+# Installation (auf dem Zielrechner, Pfade ggf. anpassen):
+#   sudo cp funken.service /etc/systemd/system/funken.service
+#   echo 'LICHESS_BOT_TOKEN=<token>' | sudo tee /etc/funken/token.env
+#   sudo chmod 600 /etc/funken/token.env
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now funken.service
+# Logs: journalctl -u funken.service -f
+#
+# Hinweis: Das Token steht nur in /etc/funken/token.env (0600, root),
+# nie im Repo, nie in der Unit-Datei, nie in Logs.
+
+[Unit]
+Description=Funken Lichess Bot (UCI engine + lichess-bot bridge)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=funken
+Group=funken
+WorkingDirectory=/opt/funken/bridge
+EnvironmentFile=/etc/funken/token.env
+ExecStart=/opt/funken/bridge/venv/bin/python /opt/funken/bridge/lichess-bot.py --config /opt/funken/bridge/config.yml
+Restart=always
+RestartSec=30
+# Harte Grenzen passend zur Engine-Konfiguration (Hash 256 MB + Reserve):
+MemoryMax=1200M
+CPUQuota=180%
+# Abschaetzung des Dateisystems (Engine schreibt nichts, Bridge nur games/):
+ProtectSystem=strict
+ReadWritePaths=/opt/funken/bridge/games /opt/funken/bridge/logs
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
