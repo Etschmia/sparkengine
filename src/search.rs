@@ -195,13 +195,16 @@ impl Searcher {
         false
     }
 
+    /// True triple repetition: `stack` always contains the current hash
+    /// (pushed by the ID driver / before recursing), so a draw needs the
+    /// hash 3 times in total, i.e. twice *before* the current occurrence.
     fn is_repetition(&self) -> bool {
         let h = self.board.hash;
         let mut count = 0;
         for &x in self.stack.iter() {
             if x == h {
                 count += 1;
-                if count >= 2 {
+                if count >= 3 {
                     return true;
                 }
             }
@@ -420,7 +423,16 @@ impl Searcher {
                 return alpha;
             }
         }
-        if self.board.half >= 100 || self.board.insufficient_material() || self.is_repetition() {
+        if self.board.half >= 100 || self.board.insufficient_material() {
+            self.pv_len[ply] = ply;
+            return 0;
+        }
+        // Repetition: never shortcut the root (ply 0). The engine must always
+        // search the legal moves and return a reasoned move, even if the
+        // current position already occurred twice before (claimable draw in
+        // a real game, but UCI still requires a move). Exact triple only.
+        if ply > 0 && self.is_repetition() {
+            self.pv_len[ply] = ply;
             return 0;
         }
         let in_check = self.board.in_check(self.board.side);
@@ -430,11 +442,13 @@ impl Searcher {
         // Triangular PV: child nodes extend pv[ply+1..]; default = empty.
         self.pv_len[ply] = ply;
 
-        // Transposition-table probe.
+        // Transposition-table probe. At the root (ply 0) the TT move is used
+        // for ordering only: a cutoff here would return without a PV, and the
+        // driver would fall back to the first generated move.
         let mut tt_move = Move::null();
         if let Some((mv, s, d, flag)) = self.tt.probe(self.board.hash) {
             tt_move = mv;
-            if d as i32 >= depth as i32 {
+            if ply > 0 && d as i32 >= depth as i32 {
                 let score = Self::mate_from_tt(s, ply as i32);
                 match flag {
                     FLAG_EXACT => return score,
@@ -865,5 +879,125 @@ mod tests {
             3,
         );
         assert_eq!(info.score, 0);
+    }
+
+    /// Play UCI moves on a fresh startpos board, returning the final board
+    /// plus the game history (hashes of all positions *before* the current).
+    fn play_startpos(moves: &[&str]) -> (Board, Vec<u64>) {
+        let mut b = Board::startpos();
+        let mut hist = Vec::new();
+        for mv in moves {
+            hist.push(b.hash);
+            let (ff, rf, tf, rt) = (
+                (mv.as_bytes()[0] - b'a') as i8,
+                (mv.as_bytes()[1] - b'1') as i8,
+                (mv.as_bytes()[2] - b'a') as i8,
+                (mv.as_bytes()[3] - b'1') as i8,
+            );
+            let (from, to) = (crate::chess::sq_at(ff, rf), crate::chess::sq_at(tf, rt));
+            let promo = if mv.len() >= 5 {
+                match mv.as_bytes()[4] as char {
+                    'n' => 1,
+                    'b' => 2,
+                    'r' => 3,
+                    'q' => 4,
+                    _ => 0,
+                }
+            } else {
+                0
+            };
+            let mut legal = Vec::new();
+            b.gen_legal(&mut legal);
+            let m = legal
+                .into_iter()
+                .find(|m| m.from == from && m.to == to && m.promo == promo)
+                .unwrap_or_else(|| panic!("illegal test move {mv}"));
+            let u = b.make(&m);
+            let us = crate::chess::opp(b.side);
+            assert!(!b.is_attacked(b.king[us as usize], b.side), "test move {mv} leaves king in check");
+            let _ = u;
+        }
+        (b, hist)
+    }
+
+    fn search_with_history(board: Board, history: Vec<u64>, depth: u8) -> SearchInfo {
+        let tt = TransTable::new_mb(1);
+        let stop = Arc::new(AtomicBool::new(false));
+        let mut s = Searcher::new(board, tt, history, stop);
+        let mut lim = SearchLimits::default();
+        lim.depth = Some(depth);
+        s.search(&lim, 0)
+    }
+
+    #[test]
+    fn second_occurrence_still_searches() {
+        // Italienisch einmal ohne, einmal mit Vorgeschichte (selbe Stellung
+        // zum ZWEITEN Mal auf dem Brett): noch kein Remis, die Wurzel muss
+        // eine echte Suche liefern (Tiefe > 1, begründeter Zug).
+        let italian = ["e2e4", "e7e5", "g1f3", "b8c6", "f1c4", "f8c5"];
+        let shuffle = ["c4b5", "c5b4", "b5c4", "b4c5"];
+        let (plain_board, _) = play_startpos(&italian);
+        let mut seq = italian.to_vec();
+        seq.extend_from_slice(&shuffle);
+        let (rep_board, rep_hist) = play_startpos(&seq);
+        assert_eq!(plain_board.hash, rep_board.hash);
+        // Die Stellung kam genau einmal in der Historie vor (2. Auftreten).
+        assert_eq!(rep_hist.iter().filter(|&&h| h == rep_board.hash).count(), 1);
+
+        let base = search_with_history(plain_board, vec![], 3);
+        let info = search_with_history(rep_board, rep_hist, 3);
+        assert!(info.depth_completed > 1, "depth = {}", info.depth_completed);
+        assert!(info.nodes > 100, "nodes = {}", info.nodes);
+        assert!(!info.best.is_null());
+        assert_eq!(info.best.to_uci(), base.best.to_uci());
+        assert_eq!(info.score, base.score);
+    }
+
+    #[test]
+    fn forced_triple_repetition_scores_zero() {
+        // Weiß steht klar schlechter (Dame + Bauern minus), kann aber per Kh1
+        // in eine Stellung zurück, die schon zweimal vorkam -> drittes
+        // Auftreten = 0. Alternativzüge verlieren deutlich, also muss Kh1 mit
+        // Score 0 gewählt werden. Mit nur einem früheren Auftreten (2.
+        // insgesamt) gilt das nicht: dann muss der Score klar negativ sein.
+        let q = Board::from_fen("3q1k2/5ppp/8/8/8/8/8/4R1K1 w - - 0 1").unwrap();
+        let mut tmp = q.clone();
+        let mut legal = Vec::new();
+        tmp.gen_legal(&mut legal);
+        let kh1 = legal.iter().find(|m| m.to_uci() == "g1h1").unwrap().clone();
+        let u = tmp.make(&kh1);
+        let p_hash = tmp.hash;
+        let _ = u;
+
+        for (hist, expect_draw) in [(vec![p_hash, p_hash], true), (vec![p_hash], false)] {
+            let info = search_with_history(q.clone(), hist, 3);
+            assert!(info.depth_completed > 1, "depth = {}", info.depth_completed);
+            if expect_draw {
+                assert_eq!(info.best.to_uci(), "g1h1");
+                assert_eq!(info.score, 0, "score = {}", info.score);
+            } else {
+                assert!(info.score < -200, "second occurrence must not draw, score = {}", info.score);
+            }
+        }
+    }
+
+    #[test]
+    fn reused_tt_still_searches_root() {
+        // TT über Suchen hinweg wiederverwenden (wie die UCI-Schleife):
+        // auch dann muss die Wurzel vollständig suchen (kein TT-Cutoff ohne
+        // PV, kein Rückfall auf den erstgenerierten Zug).
+        let (board, _) = play_startpos(&["e2e4", "e7e5", "g1f3", "b8c6", "f1c4", "f8c5"]);
+        let tt = TransTable::new_mb(1);
+        let stop = Arc::new(AtomicBool::new(false));
+        let mut s = Searcher::new(board, tt, vec![], stop);
+        let mut lim = SearchLimits::default();
+        lim.depth = Some(4);
+        let first = s.search(&lim, 0);
+        assert_eq!(first.depth_completed, 4);
+        let second = s.search(&lim, 0);
+        assert_eq!(second.depth_completed, 4);
+        assert!(second.nodes > 100, "nodes = {}", second.nodes);
+        assert!(!second.pv.is_empty());
+        assert_eq!(second.best.to_uci(), second.pv[0].to_uci());
     }
 }

@@ -27,7 +27,7 @@ ein Experiment in eigenständiger KI-Entwicklung: Der schachliche Kern
 
 ```bash
 cargo build --release          # Binary: target/release/funken
-cargo test                     # 11 Unit-Tests (müssen alle grün sein)
+cargo test                     # 14 Unit-Tests (müssen alle grün sein)
 ./target/release/funken perft 5           # Referenz: 4865609
 ./target/release/funken bench             # Mini-Benchmark
 python3 tests_ucitool.py ./target/release/funken       # UCI + Zeitverhalten

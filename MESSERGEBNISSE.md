@@ -23,14 +23,20 @@ Befehl: `./target/release/funken perft <tiefe> [fen]`.
 
 Perft-Leistung: ca. 5–14 Mio. Knoten/s (VM-lastabhängig).
 
-## 2. Unit-Tests: `cargo test` — 11/11 ✅ (ausgeführt)
+## 2. Unit-Tests: `cargo test` — 14/14 ✅ (ausgeführt)
 
 Schachkern: FEN-Roundtrip, Hash-Stabilität unter make/unmake (inkrementell ==
 rekomputiert), Startpos-Perft 1–3, **En-passant-Fesselung** (illegaler EP-Schlag
 fehlt, legale Königs-/Bauernzüge vorhanden), **Rochade durch Schach**
 (kurz illegal/lang legal), Matt & Patt, unzureichendes Material (K–K, K+L–K,
 K+S–K, gleichfarbige Läufer remis / ungleichfarbig spielbar), 8× Umwandlung.
-Suche: Matt-in-1 (`e1e8`, Matt-Score ab Tiefe 1), Patt = 0, 50-Züge = 0.
+Suche: Matt-in-1 (`e1e8`, Matt-Score ab Tiefe 1), Patt = 0, 50-Züge = 0,
+**2. Stellungswiederholung sucht weiter** (Italienisch mit Vorgeschichte:
+gleicher Zug/selber Score wie ohne Vorgeschichte, Tiefe 3),
+**erzwungenes Dreifach-Remis = 0** (Weiß klar schlechter, Kh1 stellt das
+3. Auftreten her → `g1h1`, Score 0; bei nur einem früheren Auftreten bleibt
+der Score klar negativ), **wiederverwendete TT sucht die Wurzel neu**
+(Tiefe 4 nach Tiefe 4 mit derselben TT: volle Knotenzahl, PV konsistent).
 
 ## 3. UCI + Zeitmanagement (ausgeführt, Treiber `tests_ucitool.py`)
 
@@ -52,6 +58,19 @@ Gefundene und behobene Fehler (Protokoll der Eigenkorrektur):
 3. `else-if`-Fehler: Soft-Limit bei gleichzeitigem Hard-Limit nie geprüft → behoben.
 4. Optionsname `MoveOverhead` vs. Bridge-Standard `Move Overhead` →
    beide Schreibweisen akzeptiert (von Bridge-Validierung aufgedeckt).
+5. Stellungswiederholung: 2. Auftreten wurde überall (auch an der Wurzel) als
+   Remis gewertet (Fund durch externes Review, 18.09.2026). An der Wurzel kehrte
+   die Suche sofort mit Score 0 und leerer PV zurück; der Treiber übernahm den
+   erstgenerierten Zug (`info depth 64 … nodes 64 … pv b1c3`, `bestmove b1c3`).
+   Ursache: `is_repetition` zählte `>= 2` bei Stack inklusive aktueller Stellung
+   (`src/search.rs`), Prüfung vor PV-Init/Zugschleife, auch für Ply 0; zusätzlich
+   war ein TT-Cutoff an der Wurzel möglich (leere PV, gleicher Effekt über
+   Sitzungen hinweg). Fix: exaktes Dreifach-Remis (`>= 3`), keine
+   Remis-Abkürzung und kein TT-Cutoff an der Wurzel (TT dort nur Zugordnung),
+   PV-Abbruch an Remis-Cutoffs. Tests: 3 neue Regressionstests (14/14 ✅).
+   Messung: `bench` unverändert (Startpos Tiefe 8: 52148 vs. 52116 Knoten alt,
+   gleiche Scores/PVs), Match neu vs. alt 2,0 : 0,0 (je 1× Weiß/Schwarz, 30 s
+   pro Seite — Kleinstsample, keine Stärke-Behauptung, Details in Abschnitt 5).
 
 ## 4. Vollpartien (ausgeführt, Schiedsrichter: python-chess 1.11.2)
 
@@ -82,6 +101,14 @@ Vereinsniveau-Nähe unter Blitzbedingungen — und verliert gegen SF1900 nicht.
 Suchleistung (Befehl `funken bench`, Tiefe 8): Startpos 52k Knoten/~60 ms;
 Kiwipete 313k Knoten/~0,5 s; Such-NPS ca. 0,5–1,6 Mio./s.
 
+Alt-gegen-Neu nach Wiederholungs-Fix (18.09.2026, `~/engine_match.py`,
+Schiedsrichter python-chess, je 30 s pro Seite): neu (Fix) vs. alt (38f21c9)
+**2,0 : 0,0** (je 1× Weiß/Schwarz, beide regulär mit Matt beendet, PGNs unter
+`/tmp/opencode/match_r1.pgn`, `/tmp/opencode/match_r2.pgn` — temporär, nicht im
+Repo). Ehrliche Einordnung: Kleinstsample (2 Partien); es belegt nur, dass der
+Fix im Spielbetrieb keinen Schaden anrichtet und die alte Zufallszug-Schwäche
+nach Vorgeschichte entfällt. **Keine Elo-/Stärke-Behauptung.**
+
 ## 6. Ausstehend (nicht behauptet, nicht gemessen)
 
 - `searchmoves`-Restriktion mit mehreren Zügen (nur Ein-Zug-Pfad getestet).
@@ -89,6 +116,10 @@ Kiwipete 313k Knoten/~0,5 s; Such-NPS ca. 0,5–1,6 Mio./s.
 - Langzeit-Stabilität (Stundenlauf, volles Hash, Reconnects der Bridge).
 - Lichess-Testpartien (casual) — braucht Token + Freigabe (siehe unten).
 - Systematisches Eval-Tuning, SMP, eigenes Eröffnungsrepertoire.
+- TT-Wechselwirkung mit Stellungswiederholung: Scores, in deren Teilbaum ein
+  Remis-Cutoff steckt, werden in der TT gespeichert und können auf anderen
+  Pfaden (mit anderer Historie) wiederverwendet werden — pfadabhängige
+  Restungenauigkeit, Standardverhalten, nicht als exakt behauptet.
 
 ## 7. Lichess-Anbindung: Validierungsstand (ausgeführt, ohne Token)
 

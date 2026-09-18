@@ -43,7 +43,7 @@ Zeitsteuerung: `wtime/btime/winc/binc`, `movestogo`, `movetime`, `depth`,
 ## Tests (lokal, reproduzierbar)
 
 ```bash
-cargo test                       # 11 Unit-Tests (Perft, Sonderfälle, Matt, Remis)
+cargo test                       # 14 Unit-Tests (Perft, Sonderfälle, Matt, Remis)
 ./target/release/funken perft 5  # 4865609 (Startpos, Referenz)
 python3 tests_ucitool.py ./target/release/funken    # UCI + Zeitverhalten
 python3 tests_selfplay.py ./target/release/funken 5 2  # Selbstspiel, python-chess als Schiedsrichter

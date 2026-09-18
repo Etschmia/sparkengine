@@ -50,8 +50,11 @@ Code übernommen**):
 - Nullzug-Pruning (R = 2–3), Late-Move-Reduktionen, Schach-Verlängerung,
   Futility-/Reverse-Futility-Pruning, Mattdistanz-Pruning
 - Remis: 50-Züge, unzureichendes Material, Stellungswiederholung über Hash-Historie
-  (Vereinfachung, offengelegt: im Suchbaum zählt bereits die 2. Wiederholung als
-  Remis — stabil, aber theoretisch unexakt; an der Wurzel gilt echtes Dreifach-Remis)
+  (exaktes Dreifach-Remis: der Wiederholungs-Stack enthält die aktuelle Stellung,
+  Cutoff erst beim 3. Auftreten — einheitlich für Partiehistorie und Suchbaum;
+  die Wurzel sucht immer vollständig über alle legalen Züge und liefert einen
+  begründeten Zug, auch wenn die Stellung bereits zweimal vorkam; kein
+  TT-Cutoff an der Wurzel, dort dient die TT nur der Zugordnung)
 
 Eigene Anteile: die konkrete Kombination und alle Schwellwerte (Fensterbreiten,
 Reduktionstiefen, Margins), die Zeitformel sowie die Bewertungsfunktion (unten).
