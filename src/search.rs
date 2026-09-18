@@ -960,6 +960,9 @@ mod tests {
         // Auftreten = 0. Alternativzüge verlieren deutlich, also muss Kh1 mit
         // Score 0 gewählt werden. Mit nur einem früheren Auftreten (2.
         // insgesamt) gilt das nicht: dann muss der Score klar negativ sein.
+        // Hinweis: Die Vorgeschichte ist synthetisch injiziert (derselbe Hash
+        // zweimal), keine legal ausgespielte Wiederholungssequenz — getestet
+        // wird die Zählschwelle.
         let q = Board::from_fen("3q1k2/5ppp/8/8/8/8/8/4R1K1 w - - 0 1").unwrap();
         let mut tmp = q.clone();
         let mut legal = Vec::new();

@@ -52,9 +52,11 @@ Code übernommen**):
 - Remis: 50-Züge, unzureichendes Material, Stellungswiederholung über Hash-Historie
   (exaktes Dreifach-Remis: der Wiederholungs-Stack enthält die aktuelle Stellung,
   Cutoff erst beim 3. Auftreten — einheitlich für Partiehistorie und Suchbaum;
-  die Wurzel sucht immer vollständig über alle legalen Züge und liefert einen
-  begründeten Zug, auch wenn die Stellung bereits zweimal vorkam; kein
-  TT-Cutoff an der Wurzel, dort dient die TT nur der Zugordnung)
+  bei Stellungswiederholung sucht die Wurzel immer vollständig über alle legalen
+  Züge und liefert einen begründeten Zug, auch wenn die Stellung bereits zweimal
+  vorkam; kein TT-Cutoff an der Wurzel, dort dient die TT nur der Zugordnung.
+  Unveränderte Restgrenze: Für 50-Züge-Regel und unzureichendes Material kehrt
+  auch die Wurzel weiterhin sofort mit Score 0 zurück.)
 
 Eigene Anteile: die konkrete Kombination und alle Schwellwerte (Fensterbreiten,
 Reduktionstiefen, Margins), die Zeitformel sowie die Bewertungsfunktion (unten).

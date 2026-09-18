@@ -130,8 +130,13 @@ entscheide selbst, was an der Wurzel und was im Baum richtig ist.
   (Stack enthält die aktuelle Stellung), einheitlich für Partiehistorie und Baum.
   Die offengelegte „2. Wiederholung zählt im Baum"-Vereinfachung ist damit
   gestrichen; `KONZEPT.md`, Abschnitt 3, beschreibt jetzt den exakten Stand.
-- `negamax_impl()`: keine Remis-Abkürzung bei Ply 0 — die Wurzel sucht immer über
-  alle legalen Züge; kein TT-Cutoff bei Ply 0 (nur `tt_move` für die Ordnung).
+- `negamax_impl()`: keine Wiederholungs-Abkürzung bei Ply 0 — bei
+  Stellungswiederholung sucht die Wurzel immer über alle legalen Züge; kein
+  TT-Cutoff bei Ply 0 (nur `tt_move` für die Ordnung). Präzisierung: Für
+  50-Züge-Regel (`half >= 100`) und unzureichendes Material kehrt auch die
+  Wurzel weiterhin sofort mit Score 0 zurück (unverändert, `src/search.rs`,
+  ca. Zeile 426) — die „Wurzel sucht immer"-Aussage gilt nur für
+  Stellungswiederholung und TT-Verhalten.
 - Remis-Cutoffs (50-Züge/Material/Wiederholung) setzen `pv_len[ply] = ply`, damit
   keine stale PV-Tails kopiert werden.
 
@@ -143,6 +148,11 @@ entscheide selbst, was an der Wurzel und was im Baum richtig ist.
 - `forced_triple_repetition_scores_zero`: `3q1k2/5ppp/8/8/8/8/8/4R1K1 w` (Weiß klar
   schlechter, Eval −764): mit zweimaligem früheren Auftreten von Kh1-Stellung wird
   `g1h1` mit Score 0 gewählt; mit einmaligem bleibt der Score klar negativ (< −200).
+  Präzisierung: Die Vorgeschichte ist synthetisch injiziert (derselbe Hash zweimal
+  im Historie-Vektor, keine legal vollständig ausgespielte Wiederholungssequenz) —
+  getestet wird die Zählschwelle, nicht der Partieverlauf. Exaktheit bedeutet hier
+  nur die Schwelle `>= 3`; die TT-Pfadabhängigkeit von Remis-Scores bleibt
+  (siehe Abschnitt 6).
 - `reused_tt_still_searches_root`: Suche Tiefe 4 nach Tiefe 4 mit derselben TT
   sucht voll (Knoten >> 100, PV konsistent statt erstgeneriertem Zug).
 
@@ -153,7 +163,8 @@ entscheide selbst, was an der Wurzel und was im Baum richtig ist.
 - `./target/release/funken perft 5`: **4865609** ✅ (Referenz).
 - `./target/release/funken bench` (Tiefe 8): Startpos 52148 Knoten (alt: 52116),
   Kiwipete 312538 (alt: 312597), pos3 38731 (alt: 38725); Scores/PVs identisch —
-  kein Leistungsverlust, Mini-Diff aus exakterer Zählung.
+  das zeigt nur keine auffällige Abweichung und beweist keinen fehlenden
+  Leistungsverlust.
 - UCI-Repro des Prompts (Fix): Fall 1 und Fall 2 beide `bestmove e1g1`,
   Tiefe 11, ~1,1 Mio. Knoten, identische PV (vorher Fall 2: depth 64/nodes 64,
   `bestmove b1c3`); Springerpendel-Grundstellung: Tiefe 12, `bestmove b1c3`.
@@ -163,13 +174,14 @@ entscheide selbst, was an der Wurzel und was im Baum richtig ist.
   nacheinander): **2,0 : 0,0** für neu (je 1× Weiß/Schwarz, beide Matt, normal
   beendet). PGNs: `/tmp/opencode/match_r1.pgn`, `/tmp/opencode/match_r2.pgn`
   (temporär, nicht im Repo). Binaries: `/tmp/opencode/funken-alt-38f21c9`
-  (Stand 38f21c9), `/tmp/opencode/funken-neu-fix`. Einordnung: Kleinstsample,
-  belegt nur Schadensfreiheit des Fix — **keine Elo-/Stärke-Behauptung**.
+  (Stand 38f21c9), `/tmp/opencode/funken-neu-fix`. Einordnung: Kleinstsample —
+  beobachtet wurden nur keine Abstürze und keine illegalen Züge in diesen zwei
+  Partien; das beweist weder Spielstärke noch Schadensfreiheit des Fix.
 
 ## 5. Doku korrigiert
 
-- `KONZEPT.md`, Abschnitt 3: exaktes Dreifach-Remis, Wurzel sucht immer, TT an der
-  Wurzel nur Ordnung.
+- `KONZEPT.md`, Abschnitt 3: exaktes Dreifach-Remis; Wurzel sucht bei
+  Wiederholung/TT immer, 50-Züge/Material als Restgrenze offengelegt.
 - `MESSERGEBNISSE.md`: Eigenkorrektur Nr. 5, Testzähler 14/14, Alt-gegen-Neu-Match,
   Bench-Vergleich; Abschnitt 6 („Ausstehend") um TT-Pfadabhängigkeit von
   Remis-Scores ergänzt (ehrlich als Restungenauigkeit, nicht als exakt behauptet).

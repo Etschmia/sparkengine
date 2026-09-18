@@ -35,7 +35,10 @@ Suche: Matt-in-1 (`e1e8`, Matt-Score ab Tiefe 1), Patt = 0, 50-Züge = 0,
 gleicher Zug/selber Score wie ohne Vorgeschichte, Tiefe 3),
 **erzwungenes Dreifach-Remis = 0** (Weiß klar schlechter, Kh1 stellt das
 3. Auftreten her → `g1h1`, Score 0; bei nur einem früheren Auftreten bleibt
-der Score klar negativ), **wiederverwendete TT sucht die Wurzel neu**
+der Score klar negativ; die Vorgeschichte ist dabei synthetisch injiziert —
+zweimal derselbe Hash, keine legal vollständig ausgespielte
+Wiederholungssequenz; getestet wird die Zählschwelle, nicht der
+Partieverlauf), **wiederverwendete TT sucht die Wurzel neu**
 (Tiefe 4 nach Tiefe 4 mit derselben TT: volle Knotenzahl, PV konsistent).
 
 ## 3. UCI + Zeitmanagement (ausgeführt, Treiber `tests_ucitool.py`)
@@ -66,11 +69,16 @@ Gefundene und behobene Fehler (Protokoll der Eigenkorrektur):
    (`src/search.rs`), Prüfung vor PV-Init/Zugschleife, auch für Ply 0; zusätzlich
    war ein TT-Cutoff an der Wurzel möglich (leere PV, gleicher Effekt über
    Sitzungen hinweg). Fix: exaktes Dreifach-Remis (`>= 3`), keine
-   Remis-Abkürzung und kein TT-Cutoff an der Wurzel (TT dort nur Zugordnung),
-   PV-Abbruch an Remis-Cutoffs. Tests: 3 neue Regressionstests (14/14 ✅).
-   Messung: `bench` unverändert (Startpos Tiefe 8: 52148 vs. 52116 Knoten alt,
-   gleiche Scores/PVs), Match neu vs. alt 2,0 : 0,0 (je 1× Weiß/Schwarz, 30 s
-   pro Seite — Kleinstsample, keine Stärke-Behauptung, Details in Abschnitt 5).
+   Wiederholungs-Abkürzung und kein TT-Cutoff an der Wurzel (TT dort nur
+   Zugordnung), PV-Abbruch an Remis-Cutoffs. Unverändert: Für 50-Züge-Regel
+   und unzureichendes Material kehrt auch die Wurzel weiterhin sofort mit
+   Score 0 zurück. Tests: 3 neue Regressionstests (14/14 ✅).
+   Messung: `bench` nahezu unverändert (Startpos Tiefe 8: 52148 vs. 52116 Knoten
+   alt, gleiche Scores/PVs — das zeigt nur keine auffällige Abweichung, beweist
+   aber keinen fehlenden Leistungsverlust), Match neu vs. alt 2,0 : 0,0 (je 1×
+   Weiß/Schwarz, 30 s pro Seite — Kleinstsample: keine Abstürze/illegalen Züge
+   in diesen zwei Partien beobachtet, keine Stärke- oder
+   Schadensfreiheits-Behauptung, Details in Abschnitt 5).
 
 ## 4. Vollpartien (ausgeführt, Schiedsrichter: python-chess 1.11.2)
 
@@ -105,9 +113,10 @@ Alt-gegen-Neu nach Wiederholungs-Fix (18.09.2026, `~/engine_match.py`,
 Schiedsrichter python-chess, je 30 s pro Seite): neu (Fix) vs. alt (38f21c9)
 **2,0 : 0,0** (je 1× Weiß/Schwarz, beide regulär mit Matt beendet, PGNs unter
 `/tmp/opencode/match_r1.pgn`, `/tmp/opencode/match_r2.pgn` — temporär, nicht im
-Repo). Ehrliche Einordnung: Kleinstsample (2 Partien); es belegt nur, dass der
-Fix im Spielbetrieb keinen Schaden anrichtet und die alte Zufallszug-Schwäche
-nach Vorgeschichte entfällt. **Keine Elo-/Stärke-Behauptung.**
+Repo). Ehrliche Einordnung: Kleinstsample (2 Partien) — beobachtet wurden nur
+keine Abstürze und keine illegalen Züge in diesen zwei Partien; das Ergebnis
+beweist weder Spielstärke noch Schadensfreiheit des Fix.
+**Keine Elo-/Stärke-Behauptung.**
 
 ## 6. Ausstehend (nicht behauptet, nicht gemessen)
 
