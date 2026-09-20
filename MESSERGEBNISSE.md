@@ -109,7 +109,7 @@ Vereinsniveau-Nähe unter Blitzbedingungen — und verliert gegen SF1900 nicht.
 Suchleistung (Befehl `funken bench`, Tiefe 8): Startpos 52k Knoten/~60 ms;
 Kiwipete 313k Knoten/~0,5 s; Such-NPS ca. 0,5–1,6 Mio./s.
 
-Alt-gegen-Neu nach Wiederholungs-Fix (18.09.2026, `~/engine_match.py`,
+Alt-gegen-Neu nach Wiederholungs-Fix (18.09.2026, `~/engine-arena/engine_match.py`,
 Schiedsrichter python-chess, je 30 s pro Seite): neu (Fix) vs. alt (38f21c9)
 **2,0 : 0,0** (je 1× Weiß/Schwarz, beide regulär mit Matt beendet, PGNs unter
 `/tmp/opencode/match_r1.pgn`, `/tmp/opencode/match_r2.pgn` — temporär, nicht im
@@ -129,6 +129,12 @@ beweist weder Spielstärke noch Schadensfreiheit des Fix.
   Remis-Cutoff steckt, werden in der TT gespeichert und können auf anderen
   Pfaden (mit anderer Historie) wiederverwendet werden — pfadabhängige
   Restungenauigkeit, Standardverhalten, nicht als exakt behauptet.
+  Ob daraus je ein Partiepatzer wurde, ist ungeklärt (siehe Abschnitt 9.3).
+- Ablationen aller übrigen ererbten Bausteine (LMR, Futility/Reverse-Futility,
+  Aspiration, Killer/History, Delta-Pruning, Schachverlängerung,
+  TT-Ersetzungsregel, Zeitformel) — nur Nullzug ist vermessen (Abschnitt 9.2).
+- Patzer-Repro: Stellung + Uhrstand + TT-Zustand des nächsten Einzug-Patzers
+  sichern (Abschnitt 9.3, nächste Schritte).
 
 ## 7. Lichess-Anbindung: Validierungsstand (ausgeführt, ohne Token)
 
@@ -144,7 +150,6 @@ beweist weder Spielstärke noch Schadensfreiheit des Fix.
   systemd-Unit gegen Checkliste); Installation auf dem Zielrechner steht aus.
 
 ## 8. Letzte Schritte bis zum Livebetrieb (Checkliste)
-
 1. [ ] Zielrechner festlegen (Annahme bisher: CPU-Linux wie Test-VM) und
       `sudo PREFIX=/opt/funken ./lichess/setup.sh` ausführen.
 2. [ ] Lichess-Account **neu anlegen** (wichtig: vorher **keine** Partie spielen,
@@ -161,3 +166,115 @@ beweist weder Spielstärke noch Schadensfreiheit des Fix.
       (ggf. `Move Overhead`/`move_overhead` erhöhen).
 7. [ ] Erst bei stabilem Lauf: `rated`/Matchmaking erwägen; UltraBullet bleibt
       für Bots systemseitig gesperrt.
+
+## 9. Kanon und Messung (20.09.2026, Auftrag `PROMPT_kanon_und_messung.md`)
+
+Stand: Code unverändert `a31601d` (Binary `cmp`-identisch mit
+`../engine-arena/sparkengine-a31601d`, kein neues Freeze-Binary nötig).
+Antwort auf beide Denkanstöße, erste Ablation mit neuem Verfahren
+(Buch + feste Knotenzahl), Patzer-Befund. Alle Zahlen auf der Test-VM.
+
+### 9.1 Was unsere Zahlen hergeben (Denkanstoß 1)
+
+- Keine Messung in Abschnitt 3–5 kann einen Nulleffekt von einem Gewinn
+  unterscheiden: 4 Partien vs. SF-Stufen und 2 Partien alt-gegen-neu sind
+  Kleinstsamples ohne Fehlerbalken. Das stand schon vorher so da („keine
+  Elo-Behauptung") und bleibt so.
+- Neue Regel ab jetzt: Eval- und Suchänderungen werden nur noch mit
+  Eröffnungsbuch (`openings.epd`) und fester Knotenzahl (`-n`) gemessen —
+  also Effekt der Änderung statt Zufall der Zeiteinteilung. Uhr-Partien nur
+  noch separat für die Zeiteinteilung selbst.
+- Rechnung für „2 Kerne und eine Nacht": Bei `-n 200000` dauert eine Partie
+  ~25 s (eine Partie gleichzeitig, vgl. 9.2) → ~1100 Partien in 8 Stunden.
+  Für ±20 Elo bei p ≈ 0,5 braucht man je nach Remisanteil ~400–800 Partien
+  (1,96·sd/√n ≤ 0,035 mit sd ≈ 0,35–0,5). Eine Nacht reicht also für
+  10–20-Elo-Auflösung — mit Uhr-Partien (5+0, ~10 min/Partie) wären es
+  ~50 Partien/Nacht (±~100 Elo) und damit aussichtslos. Genau dafür ist das
+  neue Verfahren da.
+
+### 9.2 Erste Ablation: Nullzug-Pruning (gemessen)
+
+Frage aus Denkanstoß 2: Verdient der Nullzug (R = 2, ab Tiefe > 6 R = 3,
+nur mit Nicht-Bauern-Material, `src/search.rs`) seinen Platz?
+Aufbau: Voll (`/tmp/funken-full` = `a31601d`) gegen Ohne-Nullzug
+(`/tmp/funken-nonull`: dieselbe Bedingung mit `false && …`, nach der Messung
+revertiert, nicht committet). 40 Partien, `BOOK=openings.epd`
+(20 Stellungen × beide Farbverteilungen), `-n 200000`, eine Partie
+gleichzeitig. PGNs: `../engine-arena/ablation-nonull-200k/` (nicht im Repo).
+
+  40 Dateien, 40 Partien: funken-full gegen funken-nonull
+    Ergebnis   22 : 18   (+12 =20 −8 aus Sicht von funken-full)
+    Score      55,0 % — Elo +35, 95-%-Bereich −42 … +115
+    LOS 81 % — Gleichstand liegt im Bereich: belegt keinen Unterschied.
+    Tiefe (Median der Partiemediane): full 10, nonull 9.
+    Enden: 20× normal, 20× dreifache Wiederholung.
+
+Einordnung: Selbst eine bekannte starke Heuristik ist mit 40 Partien nicht
+nachweisbar — der Balken ist ±~80 Elo breit. Das ist kein Versagen des
+Nullzugs, sondern die erwartete Auflösung (vgl. 9.1): Für ±20 bräuchte es
+~400–800 Partien. Auffällig: 50 % Remis (Selbstspiel aus ausgeglichenen
+Buchstellungen drückt Differenzen) und nur 1 Halbzug Tiefenabstand bei
+gleicher Knotenzahl. Der Baustein bleibt drin — nicht weil die Messung ihn
+bestätigt (das tut sie nicht), sondern weil sie ihn nicht widerlegt und die
+Buchhaltung (mehr Tiefe pro Knoten) für ihn spricht. Zweitmessung mit
+~800 Partien steht aus (Abschnitt 6).
+
+### 9.3 Die unerklärten Patzer (Punkt 1: verfolgt, Ursache offen)
+
+Serie-1-Befund bestätigt (PGNs in `../engine-arena/`): Runde 1
+(Halbzug 34, Schwarz): `34…a4??` mit Ansage +3,1/12 bei Tiefe 12 — danach
+−8 (Turmverlust in einem Zug, ~11 Bauern). Runde 4 (Halbzug 37, Weiß):
+`37.Tb1??` +0,81/13 — danach −4,2 (Qualitäts-/Turmverlust, ~5 Bauern),
+extern nicht reproduzierbar → Timing- oder TT-zustandsabhängig.
+Serie 3 (10 Nicht-Siege = 6 Niederlagen + 4 Remis, PGNs in
+`../engine-arena/match-2026-09-19-b/`): 5× langsames Untergehen über 20–60
+Züge ohne Sprünge > 1,5 Bauern (r02, r05, r10, r13, r15), 1× Einzug-Patzer
+(r09: `61…Bg5`, −0,57 → −3,83 bei Tiefe 12–13), 4× Remis (r04, r08, r11,
+r12 — in r04/r11/r12 Funken-Eval +1 bis +2 gegen Gegner-~0: mögliche
+Konvertierungsschwäche oder reine Eval-Differenz, offen).
+
+Zur Verdachtsfrage TT + Wiederholung: Der Mechanismus existiert
+(`negamax_impl` speichert Eltern-Scores, in deren Teilbaum ein
+Remis-Cutoff steckt, historienblind in der TT; Quieszenz ebenso) — eine
+falsche 0 statt ±300+ kann daraus folgen, ein Figurenverlust als Zug also
+grundsätzlich ja. Aber: kein Beweis, dass das die Serie-1-Patzer waren
+(kein Repro, keine Knoten-Logs). Zur Fensterabbruch-Frage: Der ID-Treiber
+verwirft abgebrochene Iterationen (Aspiration wie Zeit) und gibt den Zug
+der letzten vollendeten Iteration zurück — kein Rückfall auf den
+erstgenerierten Zug (Ausnahme nur: Abbruch vor Abschluss von Tiefe 1, dann
+`depth_completed = 0`). Der Wurzel-Rückfall ist seit dem Fix (`a31601d`)
+geschlossen.
+
+Folge: Keine Codeänderung, kein erfundener Regressionstest — ohne Repro
+wäre beides Schönfärberei. Nächste Schritte, fest vereinbart: Beim nächsten
+Einzug-Patzer Stellung + Uhrstand + `go nodes`-Repro sichern; als
+Experiment mit Messung (9.1-Verfahren): TT-Einträge aus
+repetitionsbeeinflussten Knoten nicht speichern bzw. Historie in den
+TT-Schlüssel aufnehmen, Kosten/Nutzen per Ablation.
+
+### 9.4 Was an Funken gemessen ist, was geerbt (Denkanstoß 2)
+
+Gemessen (eigene Tests/Messungen): exakte Dreifach-Schwelle (≥ 3),
+Wurzel-sucht-immer bei Wiederholung, TT-an-Wurzel nur Ordnung (je
+Regressionstest, Abschnitt 2); Nullzug-Ablation ohne Nachweis (9.2).
+Alles andere ist geerbt und unvermessen — übernommene Zahlen ohne eigene
+Messung dahinter: Aspiration ±25 ab Tiefe 4 (Nachsuche ±120, Halbierung),
+Nullzug-R = 2–3 (Schwelle Tiefe > 6), LMR (red 1 ab Tiefe ≥ 3 und legal > 3,
+red 2 ab Tiefe ≥ 6 und legal > 8, nur ruhige Züge), Futility-Margen 150/250
+(Tiefe ≤ 2), Reverse-Futility 90×Tiefe (Tiefe ≤ 4), Delta-Schwelle
+Gewinn + 200, 2 Killer/Ply (850k/840k), History Tiefe² (Cap 1 Mio.),
+Schachverlängerung 1, Mattdistanz-Pruning, TT-Ersetzung Tiefe+2-Toleranz,
+Zeitformel Rest/25 + Ink/2 (hart 4×), Tempo +8 sowie sämtliche
+Eval-Gewichte (Material, MOB_W, Struktur-, Läuferpaar-, Linien-,
+Schild-Terme, alle PST-Regelkoeffizienten).
+
+Gestalt-Hinweis: Die Überlieferung wuchs an Bitboard-Engines mit Millionen
+Knoten/s; Funken ist Mailbox, ein Kern, ~1 Mnps, nur std. Pruning, das dort
+getunt wurde, beschneidet hier relativ mehr — die Nullzug-Ablation (+35,
+n. s., statt überlieferter ~100+) passt zu diesem Vorbehalt, beweist ihn
+aber nicht (Remislastigkeit als Alternative, 9.2).
+
+Eigene Entscheidung gegen den Kanon, weiter verteidigt: exaktes
+Dreifach-Remis auch im Baum (statt 2. Wiederholung = Remis) und
+Wurzel-sucht-immer — Begründung: Korrektheit vor ein paar Knoten, Kosten
+vernachlässigbar. Weitere Gegenpositionen gibt es derzeit keine.

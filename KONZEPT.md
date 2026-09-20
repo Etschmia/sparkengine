@@ -58,9 +58,12 @@ Code übernommen**):
   Unveränderte Restgrenze: Für 50-Züge-Regel und unzureichendes Material kehrt
   auch die Wurzel weiterhin sofort mit Score 0 zurück.)
 
-Eigene Anteile: die konkrete Kombination und alle Schwellwerte (Fensterbreiten,
-Reduktionstiefen, Margins), die Zeitformel sowie die Bewertungsfunktion (unten).
-Keine behauptete Neuheit — das ist solides Handwerk, kein Paper.
+Eigene Anteile: die konkrete Kombination, die Zeitformel sowie die
+Bewertungsfunktion (unten). Die Schwellwerte (Fensterbreiten,
+Reduktionstiefen, Margins) sind dagegen übernommen und unvermessen —
+explizite Liste, was gemessen vs. geerbt ist, in `MESSERGEBNISSE.md`,
+Abschnitt 9.4. Keine behauptete Neuheit — das ist solides Handwerk,
+kein Paper.
 
 ## 4. Bewertung: eigene Tapered-Eval (alle Gewichte selbst gewählt)
 

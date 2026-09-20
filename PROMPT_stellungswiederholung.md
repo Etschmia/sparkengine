@@ -86,7 +86,7 @@ entscheide selbst, was an der Wurzel und was im Baum richtig ist.
      schlechter und kann durch Dauerschach oder Rückkehr Remis erzwingen.
 4. **Messung vor Übernahme**, wie in `AGENTS.md` verlangt: `bench` und ein
    kurzes Match alter gegen neuer Stand. Zum Beispiel mit
-   `~/engine_match.py`, Doku in `~/engine_match.md`, das auch Pfade zu
+   `~/engine-arena/engine_match.py`, Doku in `~/engine-arena/engine_match.md`, das auch Pfade zu
    beliebigen Binaries annimmt. Dazu vorher den alten Stand als Kopie des
    Binaries sichern.
 5. **Doku korrigieren**:
@@ -170,7 +170,7 @@ entscheide selbst, was an der Wurzel und was im Baum richtig ist.
   `bestmove b1c3`); Springerpendel-Grundstellung: Tiefe 12, `bestmove b1c3`.
 - `tests_ucitool.py`: OK (u. a. movetime 500 → 406 ms, 60+1 → 2903 ms).
 - `tests_selfplay.py` (Tiefe 5, 2 Partien): regulär, alle Züge legal.
-- Match neu vs. alt (`~/engine_match.py`, python-chess, je 30 s/Seite,
+- Match neu vs. alt (`~/engine-arena/engine_match.py`, python-chess, je 30 s/Seite,
   nacheinander): **2,0 : 0,0** für neu (je 1× Weiß/Schwarz, beide Matt, normal
   beendet). PGNs: `/tmp/opencode/match_r1.pgn`, `/tmp/opencode/match_r2.pgn`
   (temporär, nicht im Repo). Binaries: `/tmp/opencode/funken-alt-38f21c9`
