@@ -113,3 +113,28 @@ Upload. Beides nur für Tests — im Dauerbetrieb soll die Sperre greifen.
 lädt den vorhandenen Stand, überspringt bereits analysierte PGNs und schreibt
 die Vereinigung. Die Datei wächst also und wird nicht ersetzt. Löschen
 erzwingt eine Neuanalyse aller Partien.
+
+Bewusst **eine** Datei mit stabilem Namen, kein Datum darin. Martunis Reihe
+trägt zwar Datumslabel (`analyse-06.10.2026.json`), die sind dort aber von
+Hand vergeben und laufen der Realität voraus — kein Zeitstempel, keine
+Rotationsregel. Inhaltlich sind jene Dateien genauso kumulativ wie diese. Ein
+stabiler Name ist für den Konsumenten zudem einfacher: Spark liest immer
+dieselbe Datei, statt herauszufinden, welches Label gerade gilt.
+
+### Wenn die Datei zu groß wird
+
+Jeder Lauf liest die Datei komplett ein und schreibt sie komplett neu. Zum
+Vergleich: Martunis Varianten-Datei liegt bei 1,0 MB und wird grob alle zwei
+bis vier Wochen archiviert (27 Mal bisher) — vermutlich genau deshalb.
+
+Bei einigen MB ist hier derselbe Punkt erreicht. Dann:
+
+```
+analysen/archiv/voigtsbach-blunders-<bis-datum>.json    # echtes Datum diesmal
+```
+
+**Die Falle dabei** (aus dem Martuni-Betrieb): Dort steht der Dateiname in
+`analyze_cron.config.json`, und wird er nach dem Archivieren nicht angepasst,
+schreibt der nächste Lauf munter in die eben archivierte Datei weiter. Hier
+ist die entsprechende Stelle `SPARK_ANALYSE_OUTPUT_NAME` in `analyse.env` —
+beim Archivieren als Erstes dorthin schauen.
