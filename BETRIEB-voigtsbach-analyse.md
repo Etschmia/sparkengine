@@ -61,22 +61,28 @@ Analyse-Engine ist **Stockfish 17.1**. Fairy-Stockfish wird nicht gebraucht —
 Funken spielt nur `standard`.
 
 `--player Voigtsbach` ist zwingend: Die Vorgabe von `analyze_blunders.py`
-steht auf `Martuni`, ohne den Schalter würde in Voigtsbachs Partien die
-falsche Seite ausgewertet.
+steht auf `Martuni` — das Skript stammt aus jenem Projekt. Würde der Default
+hier unbemerkt greifen, analysierte der Lauf die Züge des **Gegners** statt
+Funkens eigene, und die Zahlen sähen lange plausibel aus. Das Skript bricht
+deshalb mit rc=2 ab, wenn `SPARK_ANALYSE_PLAYER` leer ist oder auf `Martuni`
+steht, statt eine falsche Reihe zu produzieren.
 
-## Übertragung — Schalter, bis freigegeben
+## Übertragung
 
 ```
-SPARK_ANALYSE_PUBLISH=0
+SPARK_ANALYSE_PUBLISH=1
 ```
 
-Der Upload legt ein Verzeichnis auf einem **fremden** Host an. Der Schalter
-steht deshalb auf 0, bis der Eigentümer dieses Hosts zugestimmt hat. Solange
-analysiert der Dienst nur lokal und sammelt die Ergebnisse an; hochgeladen
-wird nichts, es wird nicht einmal ein `mkdir` abgesetzt.
+Ziel: `martuni.de:/home/librechat/voigtsbach_analysen/`, freigegeben am
+21.09.2026. **Der Geltungsbereich ist genau dieses Verzeichnis und dieser
+Zweck.** Schleuse, `enginemartuni/` und `lichess-bot/` auf jenem Host sind
+davon nicht gedeckt — dort wird weiterhin nichts geschrieben.
 
-Nach Freigabe auf `1` setzen und `systemctl restart voigtsbach-analyse.timer`.
-Übertragen werden dann, atomar per `.tmp` + `mv`:
+Auf `0` gesetzt analysiert der Dienst nur lokal und lädt nichts hoch; es wird
+dann nicht einmal ein `mkdir` abgesetzt. Das ist der Zustand, in dem der
+Dienst ausgeliefert wurde, bevor die Zustimmung vorlag.
+
+Übertragen wird atomar per `.tmp` + `mv`:
 
 ```
 <REMOTE_DIR>/analysen/voigtsbach-blunders.json

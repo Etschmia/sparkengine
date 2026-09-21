@@ -205,6 +205,15 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    # analyze_blunders.py defaults --player to "Martuni" because it comes from
+    # that project. Silently inheriting it here would analyse the opponent's
+    # moves instead of Funken's, and the numbers would look plausible for a
+    # long time. Refuse rather than produce a wrong series.
+    if PLAYER.strip().lower() in ("", "martuni"):
+        log(f"Refusing to run: SPARK_ANALYSE_PLAYER is {PLAYER!r}, expected the "
+            f"Voigtsbach account. This analyses Funken's own moves, not Martuni's.")
+        return 2
+
     WORK_DIR.mkdir(parents=True, exist_ok=True)
     output = WORK_DIR / OUTPUT_NAME
 
