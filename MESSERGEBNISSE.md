@@ -278,3 +278,99 @@ Eigene Entscheidung gegen den Kanon, weiter verteidigt: exaktes
 Dreifach-Remis auch im Baum (statt 2. Wiederholung = Remis) und
 Wurzel-sucht-immer — Begründung: Korrektheit vor ein paar Knoten, Kosten
 vernachlässigbar. Weitere Gegenpositionen gibt es derzeit keine.
+
+### 9.5 Voigtsbach-Blunderstichprobe (22.09.2026, gemessen)
+
+Anlass: 38 Lichess-Partien (Account Voigtsbach, alle vs. Bots, 19,5/35 = 56 %),
+55 Blunder per Stockfish 17.1 Tiefe 17 (`~/voigtsbach_analysen`). Verfahren:
+12 FENs (`fen_before`, je Top-Loss pro Motiv + Matt-Fälle + 3 ohne Motiv-Tag),
+Funken aktueller Stand, frische TT, `go depth 12`, Vergleich mit gespieltem
+Zug und SF-Bestzug (Treiber `/tmp/opencode/probe_fen.py`, Rohdaten
+`/tmp/opencode/fen_probe.json` — beide temporär, nicht im Repo).
+
+- **5/12 reproduziert (systematisch, kein Zeitproblem):** Funken spielt den
+  Blunder auch bei Tiefe 12: `b7` statt `Ke5` (Matt nicht gesehen, +1232 statt
+  Matt; Endspiel), `Ng3` statt `Qxe4` (−358 statt SF −613 vor dem Zug),
+  `Nxe4` statt `Bc7` (+13 statt −114; Eröffnung, Springer hängt),
+  `Nb5` statt `d3` (+178, SF nach dem Zug 0), `Ke2` statt `Qd8+` (+30, SF
+  danach −213). In allen fünf Fällen liegt Funkens Root-Score 130–250 cp
+  neben SF *vor* dem Zug — Such- oder Eval-Blindheit, nicht nur Tiefe.
+- **2/12 bei Tiefe 12 behoben (Tiefenproblem im Blitz plausibel):** `Rxa1`
+  statt `Qxf7`, `Nd3` statt `Rg4` — im Spiel (180+2 bzw. 60+2) vermutlich zu
+  flach gesucht. Teilerfolg: `cxd3` statt SF-`Qxd3` (hängender Läufer wird
+  gesehen, aber mit der falschen Figur genommen).
+- **5/12 dritte Züge:** `g6g8` statt Matt-erlaubendem `Qc8` (−735, hält die
+  verlorene Stellung statt Matt), `h7h6` statt `Rh3` (+55 statt −15),
+  `e7e6` statt `Bf4` (+84 statt −26) — Schadensbegrenzung, nicht Bestzug;
+  `Ng5` statt `Rg5`, `Qxd3`-Variante s. oben.
+- Hypothesen (unvermessen, als Experimente mit 9.1-Verfahren zu prüfen):
+  Hängende-Figuren-Blindheit (Eval oder ruhige-Tiefe/SEE), Matt-Erkennung
+  (Verlängerung), Eröffnungs-Flachsuche bei Blitz-Bedenkzeit.
+- Ausstehend: PGNs für Uhrstand, TT-Zustand und Partiekontext (Abschnitt 6);
+  dann `go nodes`-Repro je Fall wie in 9.3 vereinbart.
+
+### 9.6 Voigtsbach-Blunder × Funkens Spiel-Sicht (22.09.2026, gemessen)
+
+Die PGNs (`~/voigtsbach_analysen/pgn/`, 38 Partien) enthalten Funkens eigene
+PV mit `[%eval x,d]` und `[%clk]` je eigenem Zug. Join mit der Blunder-JSON:
+2066 eigene Züge, 2016 mit Eval, alle 55 Blunder zugeordnet (Treiber
+`/tmp/opencode/join_blunders.py`, Daten `/tmp/opencode/blunder_funken_view.json`,
+beide temporär). Funken-Eval ist Weiß-Sicht in Bauern (Vorzeichen über die
+Tabelle verifiziert); Gegner-Elo ~1900–2210, Funken ~1980–2210.
+
+- **Zeitnot als Hauptursache widerlegt:** Tiefe am Blunder Median 13
+  (Spanne 10–17) vs. 14 über alle Züge (p10 12); Restzeit meist 30–400 s bei
+  2–19 s Bedenkzeit. Nur die beiden Martuni-Blunder (60+0, ohne Inkrement:
+  `Rb1`/`Kxg7` bei 14/7 s Rest) sind echte Zeitnot. Blunder passieren bei
+  normaler Tiefe und Bedenkzeit.
+- **Wahnmaß** |Funken-Erwartung − SF-nachher|: Median 244 cp, p90 660 cp.
+  Bei der Hälfte der Blunder lag Funken ≥ 2,4 Bauern neben der Realität.
+  Größte Delusionen: `Bxh3` 1407 (Vorzeichenflip: −8,12 statt Weiß +5,95),
+  `Rg5` 779, `Kc4` 769, `Rc3` 736, `Ng3` 687, `h4` 660, `Rd6` 626, `Ne6` 538.
+- **Kleine Lücke (12–47 cp):** `Qxh4+`, `Nc2`, `Bf4`, `d5`, `Rh3` — Funken
+  bewertete die Stellung korrekt und wählte unter Übeln (Horizont/Pruning,
+  nicht Eval-Blindheit).
+- **Die 5 Repro-Fälle aus 9.5 mit Spiel-Sicht:** `b7` d16 +14,14 (Matt auch
+  bei Tiefe 16 nicht gesehen, 86 s Rest — Matt-Erkennung bestätigt schwach);
+  `Ng3` d12 −3,58 (wusste um −3,5 und spielte es trotzdem — Rettung `Qxe4`
+  weggeprunt/Horizont); `Nxe4` d15 +0,11 (11 s Bedenkzeit, 234 s Rest —
+  reine Eval-Blindheit); `Nb5` d12 +1,78 (Überschätzung); `Ke2` d15 +0,27
+  (gegnerisches `Qd8+` nicht gesehen). `Qc8` d14 +10,41: Verlust grob
+  erkannt, einzige Rettung `Qxf5` nicht gefunden.
+- **Nuance zu 9.5:** `Qxf7` fiel im Spiel bei Tiefe 16 (tiefer als die
+  Probe mit Tiefe 12, die `Rxa1` fand) — zustandsabhängig (TT/Historie),
+  Tiefe allein erklärt es nicht (vgl. 9.3-Verdacht TT + Wiederholung).
+- **Tiefe 64** (95× im Rohtext) nur bei Matt-Ansagen (50) und 0,00 (45) —
+  Suche läuft in entschiedenen/toten Stellungen bis Max-Tiefe, harmlos,
+  nie an einem Blunder (dort max. 17).
+- Nächste Experimente (9.1-Verfahren, unvermessen): hängende Figuren
+  (Eval vs. ruhige Tiefe/SEE), Matt-Verlängerung, Pruning-Kandidaten für
+  `Ng3`-Typ (Rettung weggeschnitten).
+
+### 9.7 Session-Effekt und TT-Aging-Ablation (22.09.2026, gemessen)
+
+Frage aus 9.3/9.6: Warum spielt Funken im Spiel Züge (Qxf7, Bh7, Qc8), die
+die frische Suche nicht spielt? Methode: Sitzungssimulation (ein Prozess,
+500k-Füllsuchen entlang der Partie, 5M-Entscheidung; Skripte
+`/tmp/opencode/session_sim.py`, `/tmp/opencode/session12.py`, temporär).
+
+- Session12 (12 Fälle): Session reproduziert 8/12 Spielzüge. Drei
+  Session-Flips zu Blundern: Qc8 (frisch g6g8), Qxf7 (frisch Rxa1), Bh7.
+  Historie (moves-Liste, frische TT) allein ändert nichts; TT-Clear
+  (`ucinewgame`) vor der Entscheidung stellt frisches Ergebnis her —
+  Ursache ist TT-Inhalt über Züge (überlappende Teilbäume: alte
+  Scores/Bounds aus anderen Fenstern/Historien + Order-Pfadabhängigkeit).
+- V6 (kein TT-Store nach Repetitions-Cutoff): ändert nichts — Repetitions-
+  Taint ist nicht der Mechanismus.
+- Ablation Basis vs. V8 (Generationen-Aging: Scores/Bounds nur laufende
+  Generation, Zug immer; Patch reproduzierbar via
+  `/tmp/opencode/apply_v8v9.py`): 40 Partien, Buch, `-n 200000`,
+  PGNs `../engine-arena/ablation-ttage-200k/`. Ergebnis aus V8-Sicht
+  **14,0 : 40 (35,0 %), Elo −108, 95-%-Bereich −230…−7, LOS 1,8 %**.
+  Klare Regression: zügeübergreifende TT ist ~100 Elo wert. V8 verworfen.
+- V9 (nur Bounds altern, alte EXACT weiter cutfähig): heilt nur Qc8 (ohnehin
+  verlorene Partie), Bh7 fällt zurück, Qxf7 bleibt — Kosten-Nutzen negativ,
+  keine Ablation, verworfen.
+- Einordnung: Bewiesener Flip-Schaden ½ Punkt (JdclEX3n-Remis aus +640) aus
+  38 Partien gegen ~+100 Elo TT-Nutzen — TT-Route beendet. Weiter an frisch
+  reproduzierbaren Schwächen (E2/E3): Details in `EXPERIMENTE.md`.
