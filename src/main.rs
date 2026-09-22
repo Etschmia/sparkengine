@@ -4,6 +4,7 @@
 mod chess;
 mod eval;
 mod search;
+mod tune;
 mod uci;
 
 use std::sync::Arc;
@@ -68,6 +69,13 @@ fn main() {
         cmd_perft(depth, fen);
     } else if args.len() >= 2 && args[1] == "bench" {
         cmd_bench();
+    } else if args.len() >= 3 && args[1] == "texel-tune" {
+        // Dev-Werkzeug (wie perft/bench): Texel-Tuning auf eigener TSV-Datei.
+        // Aufruf: `funken texel-tune <train.tsv> <hold.tsv> <out.params> [sweeps]`.
+        let hold = args.get(3).map(|s| s.as_str()).unwrap_or("");
+        let out = args.get(4).map(|s| s.as_str()).unwrap_or("tuned.params");
+        let sweeps: usize = args.get(5).and_then(|v| v.parse().ok()).unwrap_or(15);
+        tune::cmd_tune(args[2].as_str(), hold, out, sweeps);
     } else {
         uci::uci_loop();
     }

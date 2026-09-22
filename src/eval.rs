@@ -10,89 +10,175 @@ use crate::chess::*;
 
 // Material values are in chess::PIECE_VALUE.
 
-// Phase weights for tapering (own choice): N=1, B=1, R=2, Q=4 per side.
+// Phase weights for tapering (own choice): N=1, R=2, Q=4 per side.
+// NOT tuned (phase definition): N=1, B=1, R=2, Q=4.
 const PHASE_W: [i32; 6] = [0, 1, 1, 2, 4, 0];
 const MAX_PHASE: i32 = 24;
+
+// --- tunable parameters ------------------------------------------------------
+// Every weight below was previously a hardcoded constant (hand values, see git
+// history). Grouped in one struct so systematic tuning (Texel/SPSA) can vary
+// them; `STANDARD` reproduces the hand values exactly. Material (PIECE_VALUE)
+// and PHASE_W are deliberately NOT parameters: the search shares PIECE_VALUE
+// (MVV-LVA, delta pruning) and must not change silently with eval tuning.
+#[derive(Clone, Copy)]
+pub struct EvalParams {
+    pub pawn_adv_sq_mg: i32,
+    pub pawn_adv_sq_eg: i32,
+    pub pawn_center: i32,
+    pub pawn_base: i32,
+    pub knight_base_mg: i32,
+    pub knight_slope_mg: i32,
+    pub knight_base_eg: i32,
+    pub knight_slope_eg: i32,
+    pub bishop_base_mg: i32,
+    pub bishop_slope_mg: i32,
+    pub bishop_base_eg: i32,
+    pub bishop_slope_eg: i32,
+    pub rook_seventh: i32,
+    pub rook_center_mg: i32,
+    pub rook_center_eg: i32,
+    pub queen_base_mg: i32,
+    pub queen_base_eg: i32,
+    pub king_base_mg: i32,
+    pub king_slope_mg: i32,
+    pub king_base_eg: i32,
+    pub king_slope_eg: i32,
+    pub mob: [i32; 6],
+    pub doubled_mg: i32,
+    pub doubled_eg: i32,
+    pub isolated_mg: i32,
+    pub isolated_eg: i32,
+    pub passed_base_mg: i32,
+    pub passed_adv_mg: i32,
+    pub passed_base_eg: i32,
+    pub passed_adv_eg: i32,
+    pub bishop_pair_mg: i32,
+    pub bishop_pair_eg: i32,
+    pub rook_open: i32,
+    pub rook_half: i32,
+    pub shield: i32,
+    pub tempo: i32,
+}
+
+pub const STANDARD: EvalParams = EvalParams {
+    pawn_adv_sq_mg: 1,
+    pawn_adv_sq_eg: 2,
+    pawn_center: 2,
+    pawn_base: -6,
+    knight_base_mg: 12,
+    knight_slope_mg: 9,
+    knight_base_eg: 8,
+    knight_slope_eg: 6,
+    bishop_base_mg: 8,
+    bishop_slope_mg: 3,
+    bishop_base_eg: 6,
+    bishop_slope_eg: 2,
+    rook_seventh: 10,
+    rook_center_mg: 4,
+    rook_center_eg: 4,
+    queen_base_mg: 4,
+    queen_base_eg: 2,
+    king_base_mg: 10,
+    king_slope_mg: 7,
+    king_base_eg: 12,
+    king_slope_eg: 5,
+    mob: [0, 4, 4, 2, 1, 0],
+    doubled_mg: 12,
+    doubled_eg: 15,
+    isolated_mg: 10,
+    isolated_eg: 12,
+    passed_base_mg: 12,
+    passed_adv_mg: 6,
+    passed_base_eg: 18,
+    passed_adv_eg: 12,
+    bishop_pair_mg: 30,
+    bishop_pair_eg: 40,
+    rook_open: 15,
+    rook_half: 8,
+    shield: 12,
+    tempo: 8,
+};
 
 // --- programmatic piece-square tables --------------------------------------
 // Tables are indexed [rank][file] from White's perspective (rank 0 = rank 1).
 // Black mirrors them with rank ^ 7.
 
-fn build_pawn(mg: &mut [[i32; 8]; 8], eg: &mut [[i32; 8]; 8]) {
+fn build_pawn(p: &EvalParams, mg: &mut [[i32; 8]; 8], eg: &mut [[i32; 8]; 8]) {
     for r in 0..8 {
         for f in 0..8 {
             let adv = r as i32; // 0..7
             let center = 3 - ((3 - f as i32).abs().min((4 - f as i32).abs()));
-            mg[r][f] = adv * adv + center * 2 - 6;
-            eg[r][f] = adv * adv * 2 + center * 2 - 6;
+            mg[r][f] = p.pawn_adv_sq_mg * adv * adv + p.pawn_center * center + p.pawn_base;
+            eg[r][f] = p.pawn_adv_sq_eg * adv * adv + p.pawn_center * center + p.pawn_base;
         }
     }
 }
 
-fn build_knight(mg: &mut [[i32; 8]; 8], eg: &mut [[i32; 8]; 8]) {
+fn build_knight(p: &EvalParams, mg: &mut [[i32; 8]; 8], eg: &mut [[i32; 8]; 8]) {
     for r in 0..8 {
         for f in 0..8 {
             // chebyshev distance to the d4/e4/d5/e5 block
             let df = if f < 3 { 3 - f as i32 } else if f > 4 { f as i32 - 4 } else { 0 };
             let dr = if r < 3 { 3 - r as i32 } else if r > 4 { r as i32 - 4 } else { 0 };
             let d = df.max(dr);
-            mg[r][f] = 12 - 9 * d;
-            eg[r][f] = 8 - 6 * d;
+            mg[r][f] = p.knight_base_mg - p.knight_slope_mg * d;
+            eg[r][f] = p.knight_base_eg - p.knight_slope_eg * d;
         }
     }
 }
 
-fn build_bishop(mg: &mut [[i32; 8]; 8], eg: &mut [[i32; 8]; 8]) {
+fn build_bishop(p: &EvalParams, mg: &mut [[i32; 8]; 8], eg: &mut [[i32; 8]; 8]) {
     for r in 0..8 {
         for f in 0..8 {
             let df = (f as i32 - 3).abs().min((f as i32 - 4).abs());
             let dr = (r as i32 - 3).abs().min((r as i32 - 4).abs());
-            mg[r][f] = 8 - 3 * (df + dr);
-            eg[r][f] = 6 - 2 * (df + dr);
+            mg[r][f] = p.bishop_base_mg - p.bishop_slope_mg * (df + dr);
+            eg[r][f] = p.bishop_base_eg - p.bishop_slope_eg * (df + dr);
         }
     }
 }
 
-fn build_rook(mg: &mut [[i32; 8]; 8], eg: &mut [[i32; 8]; 8]) {
+fn build_rook(p: &EvalParams, mg: &mut [[i32; 8]; 8], eg: &mut [[i32; 8]; 8]) {
     for r in 0..8 {
         for f in 0..8 {
-            let seventh = if r == 6 { 10 } else { 0 };
+            let seventh = if r == 6 { p.rook_seventh } else { 0 };
             let df = (f as i32 - 3).abs().min((f as i32 - 4).abs());
-            mg[r][f] = seventh + 4 - df;
-            eg[r][f] = 4 - df;
+            mg[r][f] = seventh + p.rook_center_mg - df;
+            eg[r][f] = p.rook_center_eg - df;
         }
     }
 }
 
-fn build_queen(mg: &mut [[i32; 8]; 8], eg: &mut [[i32; 8]; 8]) {
+fn build_queen(p: &EvalParams, mg: &mut [[i32; 8]; 8], eg: &mut [[i32; 8]; 8]) {
     for r in 0..8 {
         for f in 0..8 {
             let df = (f as i32 - 3).abs().min((f as i32 - 4).abs());
             let dr = (r as i32 - 3).abs().min((r as i32 - 4).abs());
-            mg[r][f] = 4 - (df + dr);
-            eg[r][f] = 2 - (df + dr) / 2;
+            mg[r][f] = p.queen_base_mg - (df + dr);
+            eg[r][f] = p.queen_base_eg - (df + dr) / 2;
         }
     }
 }
 
-fn build_king_mg(mg: &mut [[i32; 8]; 8]) {
+fn build_king_mg(p: &EvalParams, mg: &mut [[i32; 8]; 8]) {
     // Encourage a castled king: bonus near g1/c1 (and mirrored).
     for r in 0..8 {
         for f in 0..8 {
             let dg: i32 = (f as i32 - 6).abs() + (r as i32 - 0).abs();
             let dc: i32 = (f as i32 - 2).abs() + (r as i32 - 0).abs();
             let d = dg.min(dc);
-            mg[r][f] = 10 - 7 * d;
+            mg[r][f] = p.king_base_mg - p.king_slope_mg * d;
         }
     }
 }
 
-fn build_king_eg(eg: &mut [[i32; 8]; 8]) {
+fn build_king_eg(p: &EvalParams, eg: &mut [[i32; 8]; 8]) {
     for r in 0..8 {
         for f in 0..8 {
             let df = (f as i32 - 3).abs().min((f as i32 - 4).abs());
             let dr = (r as i32 - 3).abs().min((r as i32 - 4).abs());
-            eg[r][f] = 12 - 5 * (df + dr);
+            eg[r][f] = p.king_base_eg - p.king_slope_eg * (df + dr);
         }
     }
 }
@@ -105,21 +191,178 @@ pub struct Tables {
 static TABLES: std::sync::OnceLock<Tables> = std::sync::OnceLock::new();
 
 pub fn tables() -> &'static Tables {
-    TABLES.get_or_init(|| {
-        let mut t = Tables { mg: [[[0; 8]; 8]; 6], eg: [[[0; 8]; 8]; 6] };
-        build_pawn(&mut t.mg[0], &mut t.eg[0]);
-        build_knight(&mut t.mg[1], &mut t.eg[1]);
-        build_bishop(&mut t.mg[2], &mut t.eg[2]);
-        build_rook(&mut t.mg[3], &mut t.eg[3]);
-        build_queen(&mut t.mg[4], &mut t.eg[4]);
-        build_king_mg(&mut t.mg[5]);
-        build_king_eg(&mut t.eg[5]);
-        t
-    })
+    TABLES.get_or_init(|| build_tables(&STANDARD))
 }
 
-// Mobility weights per piece type (own choice), multiplied by attack-square count.
-const MOB_W: [i32; 6] = [0, 4, 4, 2, 1, 0];
+// --- Tuning-Infra (FUNKEN_PARAMS): optionale Gewichte aus Datei -------------
+// Format: `name wert` pro Zeile (von `funken texel-tune` geschrieben).
+// Ohne Env-Var: exakt STANDARD (Tests/Bench unverändert). Einmalig pro
+// Prozess geladen (OnceLock), inkl. passender Tabellen.
+static PARAM_OVERRIDE: std::sync::OnceLock<Option<(EvalParams, Tables)>> =
+    std::sync::OnceLock::new();
+
+fn param_field(p: &mut EvalParams, name: &str, v: i32) -> bool {
+    match name {
+        "pawn_adv_sq_mg" => p.pawn_adv_sq_mg = v,
+        "pawn_adv_sq_eg" => p.pawn_adv_sq_eg = v,
+        "pawn_center" => p.pawn_center = v,
+        "pawn_base" => p.pawn_base = v,
+        "knight_base_mg" => p.knight_base_mg = v,
+        "knight_slope_mg" => p.knight_slope_mg = v,
+        "knight_base_eg" => p.knight_base_eg = v,
+        "knight_slope_eg" => p.knight_slope_eg = v,
+        "bishop_base_mg" => p.bishop_base_mg = v,
+        "bishop_slope_mg" => p.bishop_slope_mg = v,
+        "bishop_base_eg" => p.bishop_base_eg = v,
+        "bishop_slope_eg" => p.bishop_slope_eg = v,
+        "rook_seventh" => p.rook_seventh = v,
+        "rook_center_mg" => p.rook_center_mg = v,
+        "rook_center_eg" => p.rook_center_eg = v,
+        "queen_base_mg" => p.queen_base_mg = v,
+        "queen_base_eg" => p.queen_base_eg = v,
+        "king_base_mg" => p.king_base_mg = v,
+        "king_slope_mg" => p.king_slope_mg = v,
+        "king_base_eg" => p.king_base_eg = v,
+        "king_slope_eg" => p.king_slope_eg = v,
+        "mob_n" => p.mob[1] = v,
+        "mob_b" => p.mob[2] = v,
+        "mob_r" => p.mob[3] = v,
+        "mob_q" => p.mob[4] = v,
+        "doubled_mg" => p.doubled_mg = v,
+        "doubled_eg" => p.doubled_eg = v,
+        "isolated_mg" => p.isolated_mg = v,
+        "isolated_eg" => p.isolated_eg = v,
+        "passed_base_mg" => p.passed_base_mg = v,
+        "passed_adv_mg" => p.passed_adv_mg = v,
+        "passed_base_eg" => p.passed_base_eg = v,
+        "passed_adv_eg" => p.passed_adv_eg = v,
+        "bishop_pair_mg" => p.bishop_pair_mg = v,
+        "bishop_pair_eg" => p.bishop_pair_eg = v,
+        "rook_open" => p.rook_open = v,
+        "rook_half" => p.rook_half = v,
+        "shield" => p.shield = v,
+        "tempo" => p.tempo = v,
+        _ => return false,
+    }
+    true
+}
+
+pub fn params_from_text(text: &str) -> Option<EvalParams> {
+    let mut p = STANDARD;
+    for (ln, line) in text.lines().enumerate() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let mut it = line.split_whitespace();
+        let (name, val) = match (it.next(), it.next()) {
+            (Some(n), Some(v)) => (n, v),
+            _ => return None,
+        };
+        let _ = ln;
+        let v: i32 = val.parse().ok()?;
+        if !param_field(&mut p, name, v) {
+            return None;
+        }
+    }
+    Some(p)
+}
+
+pub fn params_to_text(p: &EvalParams) -> String {
+    let mut s = String::new();
+    let mut w = |name: &str, v: i32| {
+        s.push_str(&format!("{name} {v}\n"));
+    };
+    w("pawn_adv_sq_mg", p.pawn_adv_sq_mg);
+    w("pawn_adv_sq_eg", p.pawn_adv_sq_eg);
+    w("pawn_center", p.pawn_center);
+    w("pawn_base", p.pawn_base);
+    w("knight_base_mg", p.knight_base_mg);
+    w("knight_slope_mg", p.knight_slope_mg);
+    w("knight_base_eg", p.knight_base_eg);
+    w("knight_slope_eg", p.knight_slope_eg);
+    w("bishop_base_mg", p.bishop_base_mg);
+    w("bishop_slope_mg", p.bishop_slope_mg);
+    w("bishop_base_eg", p.bishop_base_eg);
+    w("bishop_slope_eg", p.bishop_slope_eg);
+    w("rook_seventh", p.rook_seventh);
+    w("rook_center_mg", p.rook_center_mg);
+    w("rook_center_eg", p.rook_center_eg);
+    w("queen_base_mg", p.queen_base_mg);
+    w("queen_base_eg", p.queen_base_eg);
+    w("king_base_mg", p.king_base_mg);
+    w("king_slope_mg", p.king_slope_mg);
+    w("king_base_eg", p.king_base_eg);
+    w("king_slope_eg", p.king_slope_eg);
+    w("mob_n", p.mob[1]);
+    w("mob_b", p.mob[2]);
+    w("mob_r", p.mob[3]);
+    w("mob_q", p.mob[4]);
+    w("doubled_mg", p.doubled_mg);
+    w("doubled_eg", p.doubled_eg);
+    w("isolated_mg", p.isolated_mg);
+    w("isolated_eg", p.isolated_eg);
+    w("passed_base_mg", p.passed_base_mg);
+    w("passed_adv_mg", p.passed_adv_mg);
+    w("passed_base_eg", p.passed_base_eg);
+    w("passed_adv_eg", p.passed_adv_eg);
+    w("bishop_pair_mg", p.bishop_pair_mg);
+    w("bishop_pair_eg", p.bishop_pair_eg);
+    w("rook_open", p.rook_open);
+    w("rook_half", p.rook_half);
+    w("shield", p.shield);
+    w("tempo", p.tempo);
+    s
+}
+
+fn override_params() -> Option<(&'static EvalParams, &'static Tables)> {
+    PARAM_OVERRIDE
+        .get_or_init(|| {
+            let path = match std::env::var("FUNKEN_PARAMS") {
+                Ok(p) => p,
+                Err(_) => return None,
+            };
+            let text = match std::fs::read_to_string(&path) {
+                Ok(t) => t,
+                Err(e) => {
+                    eprintln!("FUNKEN_PARAMS: {path} nicht lesbar ({e}), STANDARD aktiv");
+                    return None;
+                }
+            };
+            match params_from_text(&text) {
+                Some(p) => {
+                    let tb = build_tables(&p);
+                    Some((p, tb))
+                }
+                None => {
+                    eprintln!("FUNKEN_PARAMS: {path} ungueltig, STANDARD aktiv");
+                    None
+                }
+            }
+        })
+        .as_ref()
+        .map(|(p, t)| (p, t))
+}
+
+pub fn build_tables(p: &EvalParams) -> Tables {
+    let mut t = Tables { mg: [[[0; 8]; 8]; 6], eg: [[[0; 8]; 8]; 6] };
+    build_pawn(p, &mut t.mg[0], &mut t.eg[0]);
+    build_knight(p, &mut t.mg[1], &mut t.eg[1]);
+    build_bishop(p, &mut t.mg[2], &mut t.eg[2]);
+    build_rook(p, &mut t.mg[3], &mut t.eg[3]);
+    build_queen(p, &mut t.mg[4], &mut t.eg[4]);
+    build_king_mg(p, &mut t.mg[5]);
+    build_king_eg(p, &mut t.eg[5]);
+    t
+}
+
+pub fn evaluate(b: &Board) -> i32 {
+    if let Some((p, t)) = override_params() {
+        evaluate_with(b, p, t)
+    } else {
+        evaluate_with(b, &STANDARD, tables())
+    }
+}
 
 // Count squares a piece attacks (own pieces block, enemy squares count).
 fn mobility_of(b: &Board, s: usize, ptype: u8, color: u8) -> i32 {
@@ -166,8 +409,7 @@ fn mobility_of(b: &Board, s: usize, ptype: u8, color: u8) -> i32 {
     n
 }
 
-pub fn evaluate(b: &Board) -> i32 {
-    let t = tables();
+pub fn evaluate_with(b: &Board, p: &EvalParams, t: &Tables) -> i32 {
     let mut mg = 0i32;
     let mut eg = 0i32;
     let mut phase = 0i32;
@@ -183,12 +425,12 @@ pub fn evaluate(b: &Board) -> i32 {
     let mut king_sq = [0u8; 2];
 
     for s in 0..64usize {
-        let p = b.sq[s];
-        if p == EMPTY {
+        let pc = b.sq[s];
+        if pc == EMPTY {
             continue;
         }
-        let c = color_of(p);
-        let pt = type_of(p) as usize;
+        let c = color_of(pc);
+        let pt = type_of(pc) as usize;
         let f = (s & 7) as usize;
         let r = (s >> 3) as usize;
         let tr = if c == WHITE { r } else { 7 - r };
@@ -211,11 +453,11 @@ pub fn evaluate(b: &Board) -> i32 {
         if pt == 5 {
             king_sq[c as usize] = s as u8;
         }
-        if MOB_W[pt] != 0 {
+        if p.mob[pt] != 0 {
             let m = mobility_of(b, s, pt as u8, c);
             // mobility matters less with little material left; scale by nothing fancy
-            mg += sign * m * MOB_W[pt] / 2;
-            eg += sign * m * MOB_W[pt] / 2;
+            mg += sign * m * p.mob[pt] / 2;
+            eg += sign * m * p.mob[pt] / 2;
         }
     }
 
@@ -225,23 +467,23 @@ pub fn evaluate(b: &Board) -> i32 {
     for f in 0..8 {
         // doubled pawns
         if white_pawn_file[f] > 1 {
-            struct_mg -= 12 * (white_pawn_file[f] - 1) as i32;
-            struct_eg -= 15 * (white_pawn_file[f] - 1) as i32;
+            struct_mg -= p.doubled_mg * (white_pawn_file[f] - 1) as i32;
+            struct_eg -= p.doubled_eg * (white_pawn_file[f] - 1) as i32;
         }
         if black_pawn_file[f] > 1 {
-            struct_mg += 12 * (black_pawn_file[f] - 1) as i32;
-            struct_eg += 15 * (black_pawn_file[f] - 1) as i32;
+            struct_mg += p.doubled_mg * (black_pawn_file[f] - 1) as i32;
+            struct_eg += p.doubled_eg * (black_pawn_file[f] - 1) as i32;
         }
         // isolated pawns
         let w_adj = (f > 0 && white_pawn_file[f - 1] > 0) || (f < 7 && white_pawn_file[f + 1] > 0);
         let b_adj = (f > 0 && black_pawn_file[f - 1] > 0) || (f < 7 && black_pawn_file[f + 1] > 0);
         if white_pawn_file[f] > 0 && !w_adj {
-            struct_mg -= 10;
-            struct_eg -= 12;
+            struct_mg -= p.isolated_mg;
+            struct_eg -= p.isolated_eg;
         }
         if black_pawn_file[f] > 0 && !b_adj {
-            struct_mg += 10;
-            struct_eg += 12;
+            struct_mg += p.isolated_mg;
+            struct_eg += p.isolated_eg;
         }
     }
     // passed pawns
@@ -262,8 +504,8 @@ pub fn evaluate(b: &Board) -> i32 {
                 }
                 if !blocked {
                     let adv = r as i32; // higher = closer to promotion
-                    struct_mg += 12 + 6 * adv;
-                    struct_eg += 18 + 12 * adv;
+                    struct_mg += p.passed_base_mg + p.passed_adv_mg * adv;
+                    struct_eg += p.passed_base_eg + p.passed_adv_eg * adv;
                 }
             }
             if bp_at[f][r] {
@@ -281,8 +523,8 @@ pub fn evaluate(b: &Board) -> i32 {
                 }
                 if !blocked {
                     let adv = (7 - r) as i32;
-                    struct_mg -= 12 + 6 * adv;
-                    struct_eg -= 18 + 12 * adv;
+                    struct_mg -= p.passed_base_mg + p.passed_adv_mg * adv;
+                    struct_eg -= p.passed_base_eg + p.passed_adv_eg * adv;
                 }
             }
         }
@@ -292,28 +534,28 @@ pub fn evaluate(b: &Board) -> i32 {
     let mut extra_mg = 0i32;
     let mut extra_eg = 0i32;
     if bishops[0] >= 2 {
-        extra_mg += 30;
-        extra_eg += 40;
+        extra_mg += p.bishop_pair_mg;
+        extra_eg += p.bishop_pair_eg;
     }
     if bishops[1] >= 2 {
-        extra_mg -= 30;
-        extra_eg -= 40;
+        extra_mg -= p.bishop_pair_mg;
+        extra_eg -= p.bishop_pair_eg;
     }
     for s in 0..64usize {
-        let p = b.sq[s];
-        if p == EMPTY || type_of(p) != 3 {
+        let pc = b.sq[s];
+        if pc == EMPTY || type_of(pc) != 3 {
             continue;
         }
-        let c = color_of(p);
+        let c = color_of(pc);
         let f = s & 7;
         let own = if c == WHITE { white_pawn_file[f] } else { black_pawn_file[f] };
         let foe = if c == WHITE { black_pawn_file[f] } else { white_pawn_file[f] };
         let sign = if c == WHITE { 1 } else { -1 };
         if own == 0 {
             if foe == 0 {
-                extra_mg += sign * 15;
+                extra_mg += sign * p.rook_open;
             } else {
-                extra_mg += sign * 8;
+                extra_mg += sign * p.rook_half;
             }
         }
     }
@@ -341,9 +583,9 @@ pub fn evaluate(b: &Board) -> i32 {
         }
         let missing = 3 - shield;
         if c == WHITE {
-            extra_mg -= 12 * missing;
+            extra_mg -= p.shield * missing;
         } else {
-            extra_mg += 12 * missing;
+            extra_mg += p.shield * missing;
         }
     }
 
@@ -353,5 +595,5 @@ pub fn evaluate(b: &Board) -> i32 {
     // taper
     let ph = phase.min(MAX_PHASE);
     (mg * ph + eg * (MAX_PHASE - ph)) / MAX_PHASE
-        + if b.side == WHITE { 8 } else { -8 } // own tempo bonus
+        + if b.side == WHITE { p.tempo } else { -p.tempo } // own tempo bonus
 }

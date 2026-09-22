@@ -81,6 +81,22 @@ und entlang SF-PV. Alle Gaps Weiß-Sicht-cp (Funken-statisch vs. SF):
   Angriffs-/Ungleichgewichts-Skala). Kein Hand-Patch trägt das — Hebel ist
   systematisches Tuning (SPSA, s. KONZEPT) + billigere Tiefe. Kein Bug.
 
+## Systematisches Tuning (SPSA/Texel, ab 22.09.)
+
+Motivation: Statik-Audit (s.o.) — `evaluate()` ehrlich aber flach, kein
+Hand-Patch trägt. Alle Daten selbst erzeugt (keine fremden Labels).
+
+- T1: Eval-Params als Struct (39 Knöpfe: PST-Regelkoeffizienten, MOB,
+  Struktur, Läuferpaar, Linien, Schild, Tempo). Material (PIECE_VALUE)
+  und PHASE_W bewusst FIX (Suche teilt sich PIECE_VALUE für MVV-LVA/Delta —
+  kein Nebeneffekt-Risiko). Verhalten identisch (Tests + Bench).
+- T2: Daten per Selbstspiel (engine_match.py, feste Knoten) → FEN+Resultat,
+  nur ruhige Stellungen (kein Schach, ab Zug 12). Kleine Menge zuerst.
+- T3: Tuner als Dev-Subkommando (perft/bench-Präzedenz, std-only):
+  Tables pro Kandidat einmal bauen, Koordinaten-Abstieg auf Texel-MSE.
+- T4: Holdout-Fehler + Ablation tuned vs. Basis (9.1). Erst dann übernehmen.
+- Pruning-Experimente (Nullzug-R etc.) danach — nicht vermischen.
+
 ## Ablauf-Log
 
 - 22.09.2026: E1–E3 angelegt. Werkzeug verifiziert (`go nodes` in
@@ -224,3 +240,28 @@ und entlang SF-PV. Alle Gaps Weiß-Sicht-cp (Funken-statisch vs. SF):
   sac-Überschätzung (Qxf7-nach +618 statisch vs. 0 — ruhiges Qb4 unsichtbar,
   Tiefen-Domäne). Nächste: SF-PV entlanggehen (Nb5-Wurzel: wo divergiert
   Funken-Statik?).
+- 22.09.2026: T1 DONE: EvalParams-Struct (39 Knöpfe, Material/PHASE_W fix),
+  `evaluate_with(b, p, t)`, `build_tables(p)`. Verifikation: 14/14 Tests,
+  0 Warnungen, Bench bit-identisch (52148/+8, 312538/-31, 38731/+19).
+  Bau-Zwischenfall (Edit fraß mobility-Signatur) bemerkt und repariert.
+- 22.09.2026: T2 läuft: 100 Selbstspiel-Partien (-n 50000, Buch) als
+  Tuning-Daten (v1, klein).
+- 22.09.2026: T2 DONE: 100 Selbstspiele (-n 50000, Buch) → 3140 Positionen
+  (train 2642, holdout 498; Filter ply>=24, kein Schach, dedup).
+  Verteilung schief (Holdout Schwarz-lastig — v1, klein, notiert).
+- 22.09.2026: T3a DONE: Tuner `funken texel-tune` (Koordinaten-Abstieg,
+  Sigmoid 1/(1+10^(-s/400)), 39 Knöpfe) + FUNKEN_PARAMS-Ladung (Warnung bei
+  Fehler, sonst STANDARD). Tests 14/14, 0 Warnungen, Bench identisch.
+  MSE STANDARD: train 0,10023 / hold 0,08136. Override-Nachweis: tempo 50
+  ändert Bench (52148→1119304 Knoten — Eval-Sensitivität belegt).
+- 22.09.2026: T3b läuft: 15 Sweeps auf v1-Daten.
+- 22.09.2026: T3b v1-ERGEBNIS: Train 0,10023 → 0,07152, Holdout 0,08136 →
+  0,12170 (monoton schlechter). LEHRBUCH-OVERFIT: 2642 rauschige Positionen
+  (50k-Selbstspiel) für 39 Knöpfe zu wenig. Richtungen wild (knight_base_mg
+  12→−33 u.a.) — kein Wert, nur Signal. KEINE Übernahme (Holdout schlechter
+  ab Sweep 1). Extractor v2: Stellungen nach Schlag/Umwandlung raus.
+- 22.09.2026: T2v2 läuft über Nacht: 1000 Partien (-n 50000, Buch),
+  `~/engine-arena/texel-gen2-50k/`, PID 3687052, Log /tmp/opencode/texel_gen2.log.
+  Danach: Extractor v2 → ~30k Positionen → Tuning mit Early-Stopp (Holdout).
+  Resume: `tail -2 /tmp/opencode/texel_gen2.log`, bei „Serie beendet":
+  `python3 tools/texel_data.py ~/engine-arena/texel-gen2-50k <train> <hold>`.
