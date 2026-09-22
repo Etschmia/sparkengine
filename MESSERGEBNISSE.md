@@ -293,7 +293,7 @@ Zug und SF-Bestzug (Treiber `/tmp/opencode/probe_fen.py`, Rohdaten
   Matt; Endspiel), `Ng3` statt `Qxe4` (−358 statt SF −613 vor dem Zug),
   `Nxe4` statt `Bc7` (+13 statt −114; Eröffnung, Springer hängt),
   `Nb5` statt `d3` (+178, SF nach dem Zug 0), `Ke2` statt `Qd8+` (+30, SF
-  danach −213). In allen fünf Fällen liegt Funkens Root-Score 130–250 cp
+  danach −213). In allen fünf Fällen liegt Funkens Root-Score 40–260 cp
   neben SF *vor* dem Zug — Such- oder Eval-Blindheit, nicht nur Tiefe.
 - **2/12 bei Tiefe 12 behoben (Tiefenproblem im Blitz plausibel):** `Rxa1`
   statt `Qxf7`, `Nd3` statt `Rg4` — im Spiel (180+2 bzw. 60+2) vermutlich zu
@@ -315,22 +315,29 @@ Die PGNs (`~/voigtsbach_analysen/pgn/`, 38 Partien) enthalten Funkens eigene
 PV mit `[%eval x,d]` und `[%clk]` je eigenem Zug. Join mit der Blunder-JSON:
 2066 eigene Züge, 2016 mit Eval, alle 55 Blunder zugeordnet (Treiber
 `/tmp/opencode/join_blunders.py`, Daten `/tmp/opencode/blunder_funken_view.json`,
-beide temporär). Funken-Eval ist Weiß-Sicht in Bauern (Vorzeichen über die
-Tabelle verifiziert); Gegner-Elo ~1900–2210, Funken ~1980–2210.
+beide temporär). Bridge-Eval ist Weiß-Sicht in Bauern; die Blunder-JSON ist
+Eigen-Sicht (immer Voigtsbach — verifiziert per Kreuzcheck mit lokalem SF
+17.1 an Nxe4: JSON −114 → −355 = SF-Weiß-Sicht +123 → +358). Alle Vergleiche
+unten in Eigen-Sicht (PGN-Werte ggf. konvertiert). Gegner-Elo ~1900–2210,
+Funken ~1980–2210.
 
 - **Zeitnot als Hauptursache widerlegt:** Tiefe am Blunder Median 13
   (Spanne 10–17) vs. 14 über alle Züge (p10 12); Restzeit meist 30–400 s bei
   2–19 s Bedenkzeit. Nur die beiden Martuni-Blunder (60+0, ohne Inkrement:
   `Rb1`/`Kxg7` bei 14/7 s Rest) sind echte Zeitnot. Blunder passieren bei
   normaler Tiefe und Bedenkzeit.
-- **Wahnmaß** |Funken-Erwartung − SF-nachher|: Median 244 cp, p90 660 cp.
-  Bei der Hälfte der Blunder lag Funken ≥ 2,4 Bauern neben der Realität.
-  Größte Delusionen: `Bxh3` 1407 (Vorzeichenflip: −8,12 statt Weiß +5,95),
-  `Rg5` 779, `Kc4` 769, `Rc3` 736, `Ng3` 687, `h4` 660, `Rd6` 626, `Ne6` 538.
-- **Kleine Lücke (12–47 cp):** `Qxh4+`, `Nc2`, `Bf4`, `d5`, `Rh3` — Funken
-  bewertete die Stellung korrekt und wählte unter Übeln (Horizont/Pruning,
-  nicht Eval-Blindheit).
-- **Die 5 Repro-Fälle aus 9.5 mit Spiel-Sicht:** `b7` d16 +14,14 (Matt auch
+- **Wahnmaß** |Funken-Erwartung − SF-nachher| (Eigen-Sicht): Median 272 cp,
+  p90 468 cp. Bei der Hälfte der Blunder lag Funken ≥ 2,7 Bauern neben der
+  Realität. Größte Delusionen: `Rg5` 779, `Kc4` 769, `Ng3` 687, `Rd6` 606,
+  `b7` 517, `Qxf7`/`Bh7` je 468, `Rc3` 440, `Rd3` 431, `Rhc1` 420.
+  (Korrektur 22.09.: JSON war fälschlich als Weiß-Sicht gelesen — Bxh3/h4-
+  „Flips" waren Artefakte; Details in `EXPERIMENTE.md`, Konventionen.)
+- **Kleine Lücke (41–77 cp):** `d5`, `Rg4`, `b3`, `Bxh4`, `Bf4`, `Rh3` —
+  Funken bewertete die Stellung korrekt und wählte unter Übeln
+  (Horizont/Pruning, nicht Eval-Blindheit).
+- **Die 5 Repro-Fälle aus 9.5 mit Spiel-Sicht** (PGN-Werte Weiß-Sicht; in
+  Eigen-Sicht: b7 +1414, Ng3 −358, Nxe4 −11, Nb5 +178, Ke2 +27, Qc8 −1041):
+  `b7` d16 +14,14 (Matt auch
   bei Tiefe 16 nicht gesehen, 86 s Rest — Matt-Erkennung bestätigt schwach);
   `Ng3` d12 −3,58 (wusste um −3,5 und spielte es trotzdem — Rettung `Qxe4`
   weggeprunt/Horizont); `Nxe4` d15 +0,11 (11 s Bedenkzeit, 234 s Rest —
@@ -343,9 +350,10 @@ Tabelle verifiziert); Gegner-Elo ~1900–2210, Funken ~1980–2210.
 - **Tiefe 64** (95× im Rohtext) nur bei Matt-Ansagen (50) und 0,00 (45) —
   Suche läuft in entschiedenen/toten Stellungen bis Max-Tiefe, harmlos,
   nie an einem Blunder (dort max. 17).
-- Nächste Experimente (9.1-Verfahren, unvermessen): hängende Figuren
-  (Eval vs. ruhige Tiefe/SEE), Matt-Verlängerung, Pruning-Kandidaten für
-  `Ng3`-Typ (Rettung weggeschnitten).
+- Nächste Schritte (unvermessen): Statik-Audit entlang SF-PVn (wo divergiert
+  `evaluate()`? Nb5-Wurzel −168, Nxe4-Blatt −129, Qxf7-nach −618);
+  QS-Diagnose ruhiger Widerlegungen (Qb4-Typ); Nullzug-Kosten für Qd8+-Typ.
+  Stand in `EXPERIMENTE.md`.
 
 ### 9.7 Session-Effekt und TT-Aging-Ablation (22.09.2026, gemessen)
 

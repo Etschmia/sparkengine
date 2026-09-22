@@ -10,6 +10,23 @@ bleiben hier.
 (`cargo build --release` nach Patch, danach Revert, nie committen).
 Ausgangspunkt: `MESSERGEBNISSE.md` 9.5/9.6 (55 Blunder, 38 Partien).
 
+**PERSPEKTIVEN-KONVENTIONEN (22.09.2026, verifiziert — hier festgehalten,
+weil der Fehler schon einmal passiert ist):**
+- Blunder-JSON (`eval_before/after_cp`, `loss_cp`): **Eigen-Sicht** (immer
+  Voigtsbach). Beweis: Nxe4 (Voigtsbach schwarz): JSON −114 → −355;
+  lokaler SF 17.1: Root +123, nach Nxe4 +358 (Weiß-Sicht) = Eigen −123/−358.
+  Passt exakt; Weiß-Sicht-Lesart (−114 → −355 = Verbesserung!) absurd.
+- Bridge-PGN `[%eval]`: **Weiß-Sicht** (Beweis: Qc8 +10,41 bei Matt gegen
+  Schwarz; Bxh3 −8,12 bei Schwarz-Gewinn → Partie 0-1).
+- Funken-UCI `info score cp`: **Seite-am-Zug-Sicht** (`score_to_uci` ohne
+  Konvertierung, `src/uci.rs:213`). In FEN-Proben (am Zug immer Voigtsbach)
+  = Eigen-Sicht — direkt mit JSON vergleichbar. In PGN [%eval] Weiß-Sicht.
+- FEHLER vom 22.09. (korrigiert): JSON als Weiß-Sicht gelesen → Wahnmaß und
+  „Vorzeichenflip" (Bxh3/h4) für Schwarz-Partien falsch. Korrekt: Median 272
+  (statt 244), p90 468 (statt 660); Bxh3/h4 waren Zustimmung, kein Flip.
+  Nxe4-H2H war KEIN „feines Gefälle": Bc7 −53 vs. Wahrheit −123 (Lücke 70),
+  Nxe4 −22 vs. Wahrheit −358 (Lücke 336!) — echte Fehleinschätzung, E2-KERN.
+
 ## E1 Matt-Erkennung (`b7` statt `Ke5`, Xa1961ka)
 
 - Stellung: `8/5k2/1Pp3p1/7p/3K3P/8/5PP1/8 w - - 0 42`, SF: Matt → +8,97.
@@ -38,6 +55,31 @@ Ausgangspunkt: `MESSERGEBNISSE.md` 9.5/9.6 (55 Blunder, 38 Partien).
 - Methode: je Pruning einzeln abschalten, `go nodes` fix auf der Stellung,
   prüfen ob Rettung auftaucht und zu welchen Knotenkosten.
 - Status: OFFEN.
+
+## Statik-Audit (22.09., Temp-Binary `/tmp/opencode/funken-eval`, Revert ok)
+
+Methode: `evaluate()` (Weiß-Sicht) vs. SF 17.1 d20–24 auf Wurzeln, Blättern
+und entlang SF-PV. Alle Gaps Weiß-Sicht-cp (Funken-statisch vs. SF):
+
+| Fall | Wurzel stat. | Wurzel SF | Blatt stat. | Blatt SF | Deutung |
+|---|---|---|---|---|---|
+| Nb5 | +104 | +272 | +77 | 0 | Aufbau −168 diffus + Zug-Optimismus |
+| Nxe4 | −6 | +114 | +215 | +344 | f5!-Ressource: stat −129 + QS-Rest |
+| Qxf7 | +124 | +663 | +618 | 0 | ruhiges Qb4: stat −618, Tiefen-Domäne |
+| Ke2 | +60 | 0 | — | — | Statik OK → Pruning (Nullzug) |
+| Rd6 | −214 | +431 | — | — | Angriff −645, Suche holt 220 bis d14 |
+
+- Nb5-PV-Walk (d3/Re1/Be3-Plan, SF +270…+351): Funken-Statik flach +93…+137,
+  bricht ply8–10 auf +24/+8/+37 ein (…Rxb2-Bauernraub ohne Fallenblick).
+  Kein einzelner Term — Aufbau + Falle brauchen Tiefe + Skala.
+- Rd6 (`2kr1b2/...`, Schwarz am Zug): Material sagt Schwarz +230 (Läuferpaar
+  inkl.), SF +431 Weiß (Qa7-Invasion). Größte statische Lücke (−645).
+  King-Shield-Vorzeichen geprüft (Z.343–347): korrekt (Weiß-relativ).
+  Kein Term-Bug gefunden — Angriffs-Skala fehlt strukturell (Mobilität Q×0,5,
+  PST ±12: nichts trägt Hunderte).
+- FAZIT Audit: `evaluate()` ehrlich aber flach (Material + Mikro-Terme, keine
+  Angriffs-/Ungleichgewichts-Skala). Kein Hand-Patch trägt das — Hebel ist
+  systematisches Tuning (SPSA, s. KONZEPT) + billigere Tiefe. Kein Bug.
 
 ## Ablauf-Log
 
@@ -87,9 +129,10 @@ Ausgangspunkt: `MESSERGEBNISSE.md` 9.5/9.6 (55 Blunder, 38 Partien).
   - b7: Ke5 gewinnt NIE (≤20M/d17). Matt strukturell unsichtbar.
   - Ng3: Rettung gewinnt erst bei 20M (−658; Ng3 kollabiert tiefer). → Tiefe,
     kein Bug. Richtung: billigere Tiefe (Pruning-Tuning).
-  - Nxe4: 1M Bc7 (−53), ab 5M Nxe4 (−22). Präferenz-Flip mit Tiefe um ~30 cp;
-    SF: Nxe4 +355, Bc7 noch besser. Feines Eval-Gefälle, DEPRIORISIERT
-    (Eval-Tuning-Territorium, kein Hand-Patch).
+  - Nxe4: 1M Bc7 (−53 eigen), ab 5M Nxe4 (−22 eigen). Wahrheit (SF):
+    Bc7 −123, Nxe4 −358 (eigen). Lücken: 70 vs. **336** — keine „feine"
+    Präferenz, sondern echte 336cp-Fehleinschätzung der Bxe4-f5-Abwicklung
+    (Statik-Anteil 129, Rest QS). E2-KERN, repriorisiert (s. Konventionen).
   - Nb5 stabil +190 (SF 0): Eval-Optimismus ~190 cp, ebenfalls Tuning-Gebiet.
   - Ke2: Rettung gewinnt bei 20M (0,00). Mit V2 schon bei 5M. → Nullzug
     versteckt Qd8+. Kandidat V5: reduzierter Nullzug (R=1/2).
@@ -176,7 +219,8 @@ Ausgangspunkt: `MESSERGEBNISSE.md` 9.5/9.6 (55 Blunder, 38 Partien).
   Flip-Schaden: ½ Punkt (JdclEX3n-Remis) + Qc8 (verloren ohnehin) aus 38
   Partien — gegen ~+100 Elo TT-Nutzen. Weiter an E2/E3-Qualität (frisch
   reproduzierbar, TT-unabhängig): Ng3 (Tiefe: Rettung erst 20M), Nxe4
-  (Gradienten-Flip, Eval-Tuning-Gebiet), Nb5 (stabiler Optimismus ~190 cp),
-  Ke2 (Nullzug versteckt Qd8+ bis 5M), sac-Überschätzung frisch (Qxf7 +540
-  bei 200k → QS/SEE-Kandidat). Nächste: Statik-Audit Nb5/Nxe4 (evaluate()
-  vs. Suche?), QS-Diagnose Opferlinien.
+  (336cp-Fehleinschätzung Bxe4-f5: Statik 129 + QS, E2-KERN), Nb5
+  (Wurzel −168 + Zug-Optimismus ~80), Ke2 (Nullzug versteckt Qd8+ bis 5M),
+  sac-Überschätzung (Qxf7-nach +618 statisch vs. 0 — ruhiges Qb4 unsichtbar,
+  Tiefen-Domäne). Nächste: SF-PV entlanggehen (Nb5-Wurzel: wo divergiert
+  Funken-Statik?).
