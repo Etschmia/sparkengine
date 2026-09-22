@@ -247,9 +247,38 @@ def schleuse_busy_locally() -> bool:
     ).returncode == 0
 
 
+def sync_pgns() -> int:
+    """Mirror the PGN archive to the remote directory, incrementally.
+
+    Spark works on the engine, and the analysis JSON only carries symptoms
+    (eval, best move, motif). Replaying a position in Funken needs the game
+    itself: opening repertoire, clock situation, endgame technique, repetition
+    patterns. Only files not already there are copied, so this stays cheap as
+    the archive grows.
+    """
+    remote_dir = f"{REMOTE_DIR}/pgn"
+    ssh(f"mkdir -p {shlex.quote(remote_dir)}", check=True)
+    have = {
+        n for n in ssh(
+            f"find {shlex.quote(remote_dir)} -maxdepth 1 -type f -name '*.pgn' -printf '%f\\0'",
+            check=True,
+        ).stdout.split("\0") if n
+    }
+    missing = [p for p in sorted(GAME_DIR.glob("*.pgn")) if p.name not in have]
+    for pgn in missing:
+        # .tmp + mv, so a reader never sees a half-written game
+        remote = f"{remote_dir}/{pgn.name}"
+        scp_to(pgn, remote + ".tmp")
+        ssh(f"mv {shlex.quote(remote + '.tmp')} {shlex.quote(remote)}", check=True)
+    if missing:
+        log(f"Synced {len(missing)} new PGN(s) to {REMOTE_HOST}:{remote_dir}")
+    return len(have) + len(missing)
+
+
 def publish(output: Path, analysed: int, blunders: int, games: list[dict] | None) -> None:
     """Upload result and status atomically (.tmp + mv), like the schleuse does."""
     ssh(f"mkdir -p {shlex.quote(REMOTE_DIR + '/analysen')}", check=True)
+    pgn_count = sync_pgns()
 
     # Orientation for whoever finds this directory (Spark), uploaded once.
     readme = WORK_DIR / "LIESMICH.md"
@@ -288,6 +317,8 @@ def publish(output: Path, analysed: int, blunders: int, games: list[dict] | None
         "blunders": blunders,
         "result_file": f"analysen/{OUTPUT_NAME}",
         "games_file": "games.json",
+        "pgn_dir": "pgn/",
+        "pgn_files": pgn_count,
     }
     if games is not None:
         remote_games = f"{REMOTE_DIR}/games.json"
