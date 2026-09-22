@@ -23,6 +23,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shlex
 import subprocess
 import sys
@@ -71,6 +72,117 @@ SCHLEUSE_OUTBOX = _env(
 QUEUE_THRESHOLD = int(_env("SPARK_ANALYSE_QUEUE_THRESHOLD", "0"))
 
 LOG_PATH = Path(_env("SPARK_ANALYSE_LOG_PATH", str(WORK_DIR / "analyse_voigtsbach.log")))
+
+
+# Mirrors analyze_cron.VANILLA_VARIANTS on the Martuni server, so "needs a
+# variant engine" means the same thing on both sides.
+VANILLA_VARIANTS = {
+    "",
+    "standard",
+    "chess",
+    "normal",
+    "from position",
+    "chess960",
+    "fischerandom",
+    "fischerrandom",
+}
+
+
+def pgn_variant(pgn_text: str) -> str:
+    """Variant name as analyze_cron.read_pgn_variant() reads it."""
+    for line in pgn_text.splitlines():
+        line = line.strip()
+        if not line:
+            break  # blank line ends the header block
+        if line.startswith("[Variant "):
+            parts = line.split('"')
+            if len(parts) >= 2:
+                return parts[1].strip().lower()
+    return "standard"
+
+
+def pgn_headers(pgn_text: str) -> dict[str, str]:
+    """Tag pairs from the first header block."""
+    out: dict[str, str] = {}
+    for line in pgn_text.splitlines():
+        line = line.strip()
+        if not line:
+            break  # blank line ends the header block
+        m = re.match(r'\[(\w+)\s+"(.*)"\]$', line)
+        if m:
+            out[m.group(1)] = m.group(2)
+    return out
+
+
+def collect_games() -> list[dict]:
+    """Metadata for every game in the archive, analysed or not.
+
+    Written for the status command on the sparkengine dev host, which shows
+    "games total" and "of those analysed" as two separate numbers — so this
+    deliberately lists *all* games, not just the ones already in
+    voigtsbach-blunders.json. Everything comes from the PGN headers; no API
+    calls.
+    """
+    games = []
+    for pgn in sorted(GAME_DIR.glob("*.pgn")):
+        text = pgn.read_text(encoding="utf-8", errors="replace")
+        h = pgn_headers(text)
+        white, black = h.get("White", ""), h.get("Black", "")
+        if PLAYER.lower() == white.lower():
+            opponent, title = black, h.get("BlackTitle", "")
+        elif PLAYER.lower() == black.lower():
+            opponent, title = white, h.get("WhiteTitle", "")
+        else:
+            continue  # not one of our games
+
+        started = None
+        date, clock = h.get("UTCDate", ""), h.get("UTCTime", "")
+        if date and clock:
+            started = f"{date.replace('.', '-')}T{clock}Z"
+
+        games.append({
+            "pgn": pgn.name,
+            "opponent": opponent,
+            "opponent_is_bot": title.upper() == "BOT",
+            "variant": pgn_variant(text),
+            "started_at": started,
+            "result": h.get("Result"),
+            "time_control": h.get("TimeControl"),
+        })
+    games.sort(key=lambda g: (g["started_at"] or "", g["pgn"]))
+    return games
+
+
+def games_path() -> Path:
+    """Local games.json — the record of what was last *published*, not merely
+    computed. It is written inside publish(), after a successful upload, so a
+    dry run can never make the next real run believe the remote is current."""
+    return WORK_DIR / "games.json"
+
+
+def games_differ(games: list[dict]) -> bool:
+    """True if `games` differs from what we last published."""
+    path = games_path()
+    if not path.exists():
+        return True
+    try:
+        old = json.loads(path.read_text(encoding="utf-8")).get("games", [])
+    except (OSError, json.JSONDecodeError):
+        return True
+    return json.dumps(old, ensure_ascii=False, sort_keys=True) != json.dumps(
+        games, ensure_ascii=False, sort_keys=True
+    )
+
+
+def write_games_local(games: list[dict]) -> None:
+    games_path().write_text(
+        json.dumps(
+            {"version": 1, "updated_at": utc_now_iso(), "games": games},
+            ensure_ascii=False, indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
 
 
 def utc_now_iso() -> str:
@@ -135,7 +247,7 @@ def schleuse_busy_locally() -> bool:
     ).returncode == 0
 
 
-def publish(output: Path, analysed: int, blunders: int) -> None:
+def publish(output: Path, analysed: int, blunders: int, games: list[dict] | None) -> None:
     """Upload result and status atomically (.tmp + mv), like the schleuse does."""
     ssh(f"mkdir -p {shlex.quote(REMOTE_DIR + '/analysen')}", check=True)
 
@@ -172,9 +284,26 @@ def publish(output: Path, analysed: int, blunders: int) -> None:
             "min_movetime": MIN_MOVETIME,
         },
         "games_analyzed": analysed,
+        "games_total": len(games) if games is not None else analysed,
         "blunders": blunders,
         "result_file": f"analysen/{OUTPUT_NAME}",
+        "games_file": "games.json",
     }
+    if games is not None:
+        remote_games = f"{REMOTE_DIR}/games.json"
+        tmp = WORK_DIR / "games.json.tmp"
+        tmp.write_text(
+            json.dumps(
+                {"version": 1, "updated_at": utc_now_iso(), "games": games},
+                ensure_ascii=False, indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        scp_to(tmp, remote_games + ".tmp")
+        ssh(f"mv {shlex.quote(remote_games + '.tmp')} {shlex.quote(remote_games)}", check=True)
+        tmp.replace(games_path())  # only now is the local copy the published state
+
     local_status = WORK_DIR / "status.json"
     local_status.write_text(json.dumps(status, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     remote_status = f"{REMOTE_DIR}/status.json"
@@ -234,6 +363,26 @@ def main() -> int:
         log(f"No game directory: {GAME_DIR}")
         return 1
 
+    # One engine is used for the whole directory, and it is Stockfish. That is
+    # correct only as long as Funken plays nothing but standard chess (the
+    # bridge config accepts `variants: [standard]`). If a variant ever shows up
+    # here, Stockfish would analyse it as if it were normal chess and produce
+    # numbers that look entirely plausible. Refuse instead — the same reasoning
+    # as the --player guard above.
+    odd = sorted(
+        {
+            v
+            for pgn in GAME_DIR.glob("*.pgn")
+            if (v := pgn_variant(pgn.read_text(encoding="utf-8", errors="replace")))
+            not in VANILLA_VARIANTS
+        }
+    )
+    if odd:
+        log(f"Refusing to run: non-standard variant(s) present in {GAME_DIR}: "
+            f"{', '.join(odd)}. This script analyses everything with "
+            f"{ENGINE!r}; variants need fairy-stockfish and a separate series.")
+        return 3
+
     before_games, _ = read_state(output)
 
     env = os.environ.copy()
@@ -267,9 +416,14 @@ def main() -> int:
     new = after_games - before_games
     log(f"Analysed {new} new game(s); {after_games} total, {blunders} blunder(s)")
 
-    if new == 0 and before_games > 0:
+    games = collect_games()
+    games_changed = games_differ(games)
+
+    if new == 0 and before_games > 0 and not games_changed:
         log("Nothing new; skipping upload")
         return 0
+    if games_changed:
+        log(f"games.json: {len(games)} game(s) total, {after_games} analysed")
     if args.no_publish:
         log("--no-publish set; not uploading")
         return 0
@@ -280,7 +434,7 @@ def main() -> int:
         )
         return 0
     try:
-        publish(output, after_games, blunders)
+        publish(output, after_games, blunders, games)
     except Exception as exc:
         log(f"Publish failed: {type(exc).__name__}: {exc}")
         return 1

@@ -86,9 +86,34 @@ Dienst ausgeliefert wurde, bevor die Zustimmung vorlag.
 
 ```
 <REMOTE_DIR>/analysen/voigtsbach-blunders.json
+<REMOTE_DIR>/games.json         (Metadaten ALLER Partien, auch unanalysierter)
 <REMOTE_DIR>/status.json
 <REMOTE_DIR>/LIESMICH.md        (einmalig, Orientierung für Spark)
 ```
+
+`games.json` speist einen Statusbefehl auf dem Zielhost. Alle Felder stammen
+aus den PGN-Headern, es gibt keine API-Abfragen. Bewusst **alle** Partien,
+nicht nur die analysierten — sonst wären „gesamt" und „davon analysiert"
+zwangsläufig gleich und die Anzeige nutzlos.
+
+Die lokale `games.json` ist der Nachweis des **zuletzt veröffentlichten**
+Standes, nicht des zuletzt berechneten: Sie wird erst nach erfolgreichem
+Upload geschrieben. Ein Trockenlauf (`--no-publish`) legt sie deshalb nicht
+an — täte er es, hielte der nächste echte Lauf den Remote-Stand für aktuell
+und überspränge den Upload.
+
+## Varianten-Wächter
+
+Der Lauf analysiert das ganze Verzeichnis mit **einer** Engine, und das ist
+Stockfish. Richtig ist das nur, solange Funken ausschließlich Standardschach
+spielt (die Bridge nimmt `variants: [standard]` an). Taucht je eine Variante
+in `game_records/` auf, bricht das Skript mit `rc=3` ab, statt sie von
+Stockfish als normales Schach rechnen zu lassen — dieselbe Begründung wie
+beim `--player`-Wächter: Das Ergebnis wäre nicht offensichtlich falsch,
+sondern plausibel falsch.
+
+Wenn Varianten dazukommen sollen, braucht es hier dieselbe Weiche wie im
+Schleusen-Worker (`detect_engine`) und eine getrennte Ausgabedatei.
 
 ## Betrieb
 
