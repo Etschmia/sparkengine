@@ -400,3 +400,18 @@ fremden Labels), Filter ply ≥ 24, kein Schach, nicht nach Schlag/Umwandlung.
   MSE-Gewinn übersetzt sich nicht in Stärke — keine Übernahme. Nächste
   Runde (stärkere Daten) zurückgestellt; Pipeline und Skripte bleiben
   (`src/tune.rs`, `tools/texel_{gen,data}.py`).
+- Label-Filter-Retune (23.09.2026, ROADMAP-Gate 2): v3-Daten gefiltert auf
+  tiefenstabile Such-Eval (10k vs. 50k Knoten, |Δ| ≤ 50 cp, mates raus;
+  Werkzeug `/tmp/opencode/label_filter.py`, persistent, ucinewgame/200):
+  train 68193/78512 (86,9 %), hold 7407/8493 (87,2 %). Retune (25 Sweeps,
+  Early-Stopp): STANDARD 0,08658/0,08224 → best 0,08509/**0,08205**
+  (Holdout **−0,2 %**, Stopp nach Sweep 4). Kein Holdout-Plus → keine
+  Ablation (Regel). Nebenbefund: STANDARD liegt auf gefilterten Daten
+  schlechter als auf ungefilterten (0,08658 vs. 0,08119) — stabile
+  Positionen tragen kein stärkeres Signal. Tuning-Kapitel zu (v1 Overfit,
+  v3 pari, v3-gefiltert flach).
+- LMR-Mikros (23.09.2026, ROADMAP-Gate 1): red1only/late/deep als
+  /tmp-Binaries (revertiert), 8 Stellungen × 500k/1M/2M
+  (`/tmp/opencode/micro_lmr.py`, Rohdaten `micro_lmr.json`): **keine
+  Rettung** (Qxe4/Qxf5/Qd8+) bei ≤ 2M in keiner Variante — alle wie Basis.
+  LMR-Kapitel zu (V4 ohne LMR s. `EXPERIMENTE.md`).

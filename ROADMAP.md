@@ -1,4 +1,4 @@
-# Funken-Roadmap: von Blunder-Analyse zu Stärke (Stand 23.09.2026)
+# Funken-Roadmap: von Blunder-Analyse zu Stärke (Stand 23.09.2026, abends)
 
 Dies ist das Wiedereinstiegs-Dokument für eine spätere Sitzung: als Prompt
 einlesen, dann bei **Empfehlung** fortfahren. Details in `EXPERIMENTE.md`
@@ -6,20 +6,21 @@ einlesen, dann bei **Empfehlung** fortfahren. Details in `EXPERIMENTE.md`
 
 ## Empfehlung (nächster Schritt)
 
-Zwei Gate-Tests parallel, beide billig (keine Nachtläufe nötig):
+Beide Gates vom 23.09. NEGATIV (s. Stand) — die billigen Hebel sind
+geschlossen. Nächster Schritt nach Aufwand/Nutzen:
 
-1. **LMR-Mikros:** LMR-Schwellen/Reduktionen variieren (aktuell ungeprüft
-   ererbt: red 1 ab Tiefe ≥ 3/legal > 3, red 2 ab Tiefe ≥ 6/legal > 8) und per
-   `go nodes` auf den 8 Blunder-Stellungen prüfen, ob eine Rettung
-   (Qxe4, Qxf5, Qd8+) bei ≤ 2M Knoten erscheint. Werkzeug:
-   `/tmp/opencode/micro_nodes.py` (Achtung: `/tmp` evtl. weg — siehe unten).
-2. **Label-Filter-Retune:** Tuning-Daten filtern auf Stellungen mit
-   tiefen-stabiler Such-Eval (= vertrauenswürdige Labels), v3-Daten
-   (87k Positionen) neu tunen mit Early-Stopp, Holdout prüfen. Nur bei
-   Holdout-Plus weiter zur Ablation.
+1. **200k-Tuning-Daten** (~10 h Maschine, Hintergrundjob, kein Risiko):
+   `tools/texel_gen.py` mit höherer Knotenzahl pro Partie als v3 (50k),
+   danach Standard-Pipeline (Extrakt → Tune → Holdout → nur bei Plus
+   Ablation). ACHTUNG: Label-Filter brachte nichts (−0,2 %); „stärker"
+   heißt hier tiefere Partien, nicht schärferes Filtern. Auch das kann pari
+   enden (MSE→Stärke-Lücke) — als Experiment, nicht als Übernahmeplan.
+2. **QS mit Schachgeboten / SEE** (Feature, 1–2 Wochen inkl.
+   Korrektheitsrisiko): adressiert ruhige Ressourcen (Qb4/f5-Typ, E2-KERN)
+   direkt. Größter theoretischer Hebel, aber teuer und riskant.
 
-Erst wenn ein Gate anschlägt: 40-Spiele-Check, dann Nachtlauf (400–800) für
-die Übernahme (Kriterium: LOS ≥ ~95 % oder pari + Prinzip; Minus = verwerfen).
+Zeitmanagement bleibt schwächster Hebel (keine Zeitnot außer 60+0).
+Kein Langlauf ohne expliziten Auftrag starten.
 
 ## Stand (Lesestoff für den Einstieg, 10 Minuten)
 
@@ -32,7 +33,11 @@ die Übernahme (Kriterium: LOS ≥ ~95 % oder pari + Prinzip; Minus = verwerfen)
 - Texel-Tuning: Pipeline steht (`src/tune.rs`, `tools/texel_{gen,data}.py`,
   `FUNKEN_PARAMS`), v3 neutral (20/40, 50 %) — schwache Labels.
 - Pruning-Sweep (RFP/Null/LMR/Futility/Aspiration): kein Schalter holt
-  Rettungen in Spiel-Budgets. Pruning-Kapitel (billig) zu.
+  Rettungen in Spiel-Budgets. Pruning-Kapitel (billig) zu. LMR-Mikros
+  (23.09.: red1only/late/deep, ≤2M): ebenfalls keine Rettung — LMR zu.
+- Label-Filter-Retune (23.09.): 87 % der v3-Daten tiefenstabil, aber Retune
+  nur −0,2 % Holdout (kein Plus → keine Ablation). Tuning-Kapitel zu
+  (v1 Overfit, v3 pari, v3-gefiltert flach).
 - Perspektiven (Fehlerquelle!): Blunder-JSON = Eigen-Sicht, PGN-[%eval] =
   Weiß-Sicht, UCI-`info score` = Seite-am-Zug. Details `EXPERIMENTE.md` oben.
 

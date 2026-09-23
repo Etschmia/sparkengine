@@ -289,3 +289,46 @@ Hand-Patch trägt. Alle Daten selbst erzeugt (keine fremden Labels).
   (≤2M). Keine Ablation (nichts zu übernehmen). Pruning-Kapitel zu (billig).
   Resthebel (Projekte): Such-Effizienz global, stärkere Tuning-Daten,
   Zeitmanagement.
+- 23.09.2026: GATE 1 LMR-MIKROS (ROADMAP-Empfehlung 1): drei milde Varianten
+  als /tmp-Binaries (danach revertiert, Baum sauber): red1only (kein red=2),
+  late (red1 erst legal>5, red2 erst legal>12), deep (red1 erst Tiefe≥4,
+  red2 erst Tiefe≥7). Matrix 8 Stellungen × 500k/1M/2M, frische Prozesse,
+  Werkzeug `/tmp/opencode/micro_lmr.py`, Rohdaten
+  `/tmp/opencode/micro_lmr.json`. ERGEBNIS: **keine Rettung** (a4e4/c5f5/d1d8)
+  in keiner Variante bei ≤2M — alle spielen wie Basis (Ng3→e2g3, Ke2→f3e2,
+  Qc8→g6g8; Nxe4→f6e4 erst bei 2M wie Basis). Nur Score-/Tiefen-Diffs
+  (±1 Ply). GATE 1 NEGATIV — keine Ablation, LMR-Kapitel zu.
+  Nebenbefund: erster Mikro-Lauf mit unrevertiertem Binary (deep als „Basis")
+  verworfen und nach Rebuild (Bench-Referenz verifiziert) wiederholt.
+- 23.09.2026: GATE 2 LABEL-FILTER läuft (ROADMAP-Empfehlung 2): v3-Daten
+  (texel3: 78512 train + 8493 hold) filtern auf tiefenstabile Such-Eval
+  (persistente UCI-Session, `go nodes` 10k vs. 50k, behalten wenn beide cp
+  und |Δ|≤50; mates raus; ucinewgame alle 200 Positionen gegen TT-Carryover).
+  Werkzeug `/tmp/opencode/label_filter.py`. Pilot (500 Zeilen): 89 % kept,
+  5 % mate, 6 % instabil.   Volläufe als Hintergrundjobs
+  (PIDs in Logs, `tail /tmp/opencode/filter_{train,hold}.log`):
+  → danach `funken texel-tune` auf gefilterten Daten (25 Sweeps) + Holdout.
+- 23.09.2026: GATE 2 ERGEBNIS (Filter fertig: train 68193/78512 = 86,9 %,
+  hold 7407/8493 = 87,2 %; Rest mates ~5 % + instabil ~8 %):
+  `funken texel-tune` auf gefilterten Daten (25 Sweeps, Early-Stopp Geduld 3):
+  STANDARD train 0,08658/hold 0,08224 → best (Sweep 1) train 0,08509 /
+  hold **0,08205 (−0,2 %)**. Stopp nach Sweep 4 (Holdout-Plateau).
+  Zum Vergleich v3 ungefiltert: −3,6 % Holdout (das selbst pari spielte).
+  Nebenbefund: STANDARD-MSE auf gefilterten Daten *schlechter* als auf
+  ungefilterten (0,08658 vs. 0,08119) — der Filter entfernte gerade gut
+  passende Labels; stabile Positionen, kein stärkeres Signal.
+  GATE 2 NEGATIV (kein Holdout-Plus → keine Ablation per ROADMAP-Regel).
+  Tuning-Kapitel damit zu (v1 Overfit, v3 pari, v3-gefiltert flach).
+  Rohdaten: `/tmp/opencode/texel3_filt50_{train,hold}.tsv`,
+  `/tmp/opencode/params_filt50.txt`, Log `/tmp/opencode/tune_filt50.log`.
+- 23.09.2026: GEN4 BEAUFTRAGT (Tobias): 200.000 Tuning-Positionen, -n 200000
+  (4× v3-Knoten, stärkere Labels), 2 parallele Jobs auf 2 Kernen.
+  Piloten: 6 Partien -n 100000 in 44 s, 6 Partien -n 200000 in 82 s
+  (13,7 s/Partie, 106 Halbzüge/Partie wie v3). Hochrechnung: 3800 Partien
+  (2×1900, Seeds 20260923/24) ≈ 7,2 h, Ertrag ~220k Positionen (v3-Rate
+  58/Spiel, 55 % Extrakt).   Dirs `~/engine-arena/texel-gen4-200k/{jobA,jobB}/`,
+  Logs `/tmp/opencode/texel_gen4_{A,B}.log` (PIDs 260129/260127, Start
+  21:18 CEST, beide verifiziert produzierend). KEIN QS/SEE, KEIN Rollout. KEIN QS/SEE, KEIN Rollout.
+  Nach Abschluss: PGNs in ein Dir (Präfix a_/b_), EIN texel_data.py-Lauf
+  (globaler Dedup + Holdout), zählen, MESSERGEBNISSE. Retune danach ist
+  NICHT beauftragt (Folgeentscheidung).
