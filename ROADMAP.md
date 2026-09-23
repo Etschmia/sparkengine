@@ -6,21 +6,23 @@ einlesen, dann bei **Empfehlung** fortfahren. Details in `EXPERIMENTE.md`
 
 ## Empfehlung (nächster Schritt)
 
-Beide Gates vom 23.09. NEGATIV (s. Stand) — die billigen Hebel sind
-geschlossen. Nächster Schritt nach Aufwand/Nutzen:
+Korrektur 23.09. (Befund Tobias, verifiziert): Die Tuning-Ablation
+(Basis vs. Tuned 20/40) war UNGÜLTIG (20/20 identische Paare — Wrapper-Env
+von altem Binary ignoriert). Damit sind „Tuning-Kapitel zu",
+„Pruning-/LMR-Kapitel zu" und die Gate-2-Begründung OFFEN, nicht gemessen.
+Mikro-Gates („dreht die 8 Stellungen nicht") sind kein Stärke-Kriterium.
 
-1. **200k-Tuning-Daten** (~10 h Maschine, Hintergrundjob, kein Risiko):
-   `tools/texel_gen.py` mit höherer Knotenzahl pro Partie als v3 (50k),
-   danach Standard-Pipeline (Extrakt → Tune → Holdout → nur bei Plus
-   Ablation). ACHTUNG: Label-Filter brachte nichts (−0,2 %); „stärker"
-   heißt hier tiefere Partien, nicht schärferes Filtern. Auch das kann pari
-   enden (MSE→Stärke-Lücke) — als Experiment, nicht als Übernahmeplan.
-2. **QS mit Schachgeboten / SEE** (Feature, 1–2 Wochen inkl.
-   Korrektheitsrisiko): adressiert ruhige Ressourcen (Qb4/f5-Typ, E2-KERN)
-   direkt. Größter theoretischer Hebel, aber teuer und riskant.
+Laufend: **Gen4** (beauftragt, 2 Jobs, ETA ~04:30 — NICHT anfassen).
+Danach in dieser Reihenfolge (Kerne bis dahin belegt):
 
-Zeitmanagement bleibt schwächster Hebel (keine Zeitnot außer 60+0).
-Kein Langlauf ohne expliziten Auftrag starten.
+1. **Extrakt** Gen4 → zählen (Ziel ≥ 200k), MESSERGEBNISSE.
+2. **Tuned-Repeat:** Basis vs. params_v3-Wrapper, ≥ 200 Partien,
+   Zufallsopenings (> 20), mit `tools/precheck.sh`. Ergebnis Elo + CI + LOS.
+3. **Varianten-Matches** Nullzug-Marge (+150), LMR-late vs. Basis (je ≥ 200,
+   Precheck). Die 8 Stellungen bleiben Diagnose, kein Kriterium.
+4. Erst danach: QS/SEE-Entscheidung, Zeitmanagement.
+
+Kein Langlauf ohne expliziten Auftrag starten (Gen4 ausgenommen, läuft).
 
 ## Stand (Lesestoff für den Einstieg, 10 Minuten)
 
@@ -33,11 +35,13 @@ Kein Langlauf ohne expliziten Auftrag starten.
 - Texel-Tuning: Pipeline steht (`src/tune.rs`, `tools/texel_{gen,data}.py`,
   `FUNKEN_PARAMS`), v3 neutral (20/40, 50 %) — schwache Labels.
 - Pruning-Sweep (RFP/Null/LMR/Futility/Aspiration): kein Schalter holt
-  Rettungen in Spiel-Budgets. Pruning-Kapitel (billig) zu. LMR-Mikros
-  (23.09.: red1only/late/deep, ≤2M): ebenfalls keine Rettung — LMR zu.
-- Label-Filter-Retune (23.09.): 87 % der v3-Daten tiefenstabil, aber Retune
-  nur −0,2 % Holdout (kein Plus → keine Ablation). Tuning-Kapitel zu
-  (v1 Overfit, v3 pari, v3-gefiltert flach).
+  Rettungen in Spiel-Budgets — OFFEN (nur Mikro-Diagnose, kein Stärke-Befund;
+  echte Matches ausstehend). LMR-Mikros (23.09.: red1only/late/deep, ≤2M):
+  ebenfalls keine Rettung — OFFEN (Match LMR-late ausstehend).
+- Label-Filter-Retune (23.09.): 87 % tiefenstabil, Retune −0,2 % Holdout.
+  OFFEN: Die Deutung („schwache Labels") stützte sich auf die UNGÜLTIGE
+  Tuning-Ablation; Urteil erst nach Tuned-Repeat (≥200, Precheck).
+  Gen4 (200k Positionen @200k Knoten) läuft beauftragt.
 - Perspektiven (Fehlerquelle!): Blunder-JSON = Eigen-Sicht, PGN-[%eval] =
   Weiß-Sicht, UCI-`info score` = Seite-am-Zug. Details `EXPERIMENTE.md` oben.
 
@@ -52,8 +56,14 @@ Kein Langlauf ohne expliziten Auftrag starten.
 ## Mess-Regeln (nicht verhandelbar)
 
 Buch (`~/engine-arena/openings.epd`) + feste Knoten (`-n`), nie Uhr (außer für
-Zeitmanagement selbst). n=40 → ±80 Elo (nur Riesen-Effekte); n=400–800 →
-±20 (eine Nacht). Kein Elo erfinden, keine Übernahme ohne Messung.
+Zeitmanagement selbst). n=40 → ±80 Elo (nur Riesen-Effekte, kein
+Verwerfungs-Kriterium); n=400–800 → ±20 (eine Nacht). Kein Elo erfinden,
+keine Übernahme ohne Messung. Seit 23.09. zusätzlich: **Precheck**
+(`tools/precheck.sh`) vor/nach jedem Match Pflicht (Bench-Divergenz + md5,
+danach Paar-Check; >10 % identische Paare = ungültig); **Mindestgröße 200
+Partien** (>20 Eröffnungen, Zufallsopenings) für Stärke-Aussagen; **nicht
+signifikant = offen, nicht tot** — keine Variante wird allein wegen „Gate
+negativ" oder „n=40 pari" verworfen.
 
 ## Resume-Anleitung
 

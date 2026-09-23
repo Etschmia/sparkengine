@@ -132,7 +132,18 @@ beweist weder Spielstärke noch Schadensfreiheit des Fix.
   Ob daraus je ein Partiepatzer wurde, ist ungeklärt (siehe Abschnitt 9.3).
 - Ablationen aller übrigen ererbten Bausteine (LMR, Futility/Reverse-Futility,
   Aspiration, Killer/History, Delta-Pruning, Schachverlängerung,
-  TT-Ersetzungsregel, Zeitformel) — nur Nullzug ist vermessen (Abschnitt 9.2).
+  TT-Ersetzungsregel, Zeitformel) — nur Nullzug ist vermessen (Abschnitt 9.2,
+  dort als offen eingestuft: n = 40 trägt keinen Stärke-Befund).
+- Wiederholung der Tuning-Ablation (Basis vs. params_v3, UNGÜLTIG s. 9.8):
+  ≥ 200 Partien, > 20 Eröffnungen (Zufallsopenings), Precheck — ausstehend,
+  eingeplant nach Gen4-Langlauf (Kerne belegt bis ~04:30).
+- Varianten-Matches Nullzug-Marge (+150) und LMR-late vs. Basis (je ≥ 200,
+  Precheck) — ausstehend, gleiche Einplanung. Die 8 Blunder-Stellungen bleiben
+  Diagnose, nicht Übernahme-Kriterium.
+- Mess-Regel seit 23.09. (Befund-Korrektur): Precheck (`tools/precheck.sh`)
+  vor/nach jedem Match Pflicht; Mindestgröße 200 Partien; keine Variante wird
+  allein wegen „Gate negativ" oder „n = 40 pari" verworfen — nicht signifikant
+  heißt „offen", nicht „tot"; Übernahme nur mit gemessenem Plus.
 - Patzer-Repro: Stellung + Uhrstand + TT-Zustand des nächsten Einzug-Patzers
   sichern (Abschnitt 9.3, nächste Schritte).
 
@@ -214,10 +225,13 @@ nachweisbar — der Balken ist ±~80 Elo breit. Das ist kein Versagen des
 Nullzugs, sondern die erwartete Auflösung (vgl. 9.1): Für ±20 bräuchte es
 ~400–800 Partien. Auffällig: 50 % Remis (Selbstspiel aus ausgeglichenen
 Buchstellungen drückt Differenzen) und nur 1 Halbzug Tiefenabstand bei
-gleicher Knotenzahl. Der Baustein bleibt drin — nicht weil die Messung ihn
-bestätigt (das tut sie nicht), sondern weil sie ihn nicht widerlegt und die
-Buchhaltung (mehr Tiefe pro Knoten) für ihn spricht. Zweitmessung mit
-~800 Partien steht aus (Abschnitt 6).
+gleicher Knotenzahl. Status seit Befund-Korrektur 23.09.: **offen, nicht
+stärke-belegt** (n = 40 ist kein Beleg in irgendeine Richtung; Regel seitdem:
+kein Verwerfen wegen „n = 40 pari", Wiederholung ≥ 200 Partien mit Precheck).
+Der Baustein bleibt drin — nicht weil die Messung ihn bestätigt (das tut sie
+nicht), sondern weil sie ihn nicht widerlegt und die Buchhaltung (mehr Tiefe
+pro Knoten) für ihn spricht. Zweitmessung mit ~800 Partien steht aus
+(Abschnitt 6).
 
 ### 9.3 Die unerklärten Patzer (Punkt 1: verfolgt, Ursache offen)
 
@@ -396,10 +410,17 @@ fremden Labels), Filter ply ≥ 24, kein Schach, nicht nach Schlag/Umwandlung.
   balanciert): Train 0,08119 → 0,07656, Holdout 0,07703 → 0,07428 (25 Sweeps,
   gemeinsam, Early-Stopp nicht ausgelöst). 33/39 Params bewegt.
 - Ablation Basis vs. Tuned (Wrapper, 40 Partien, Buch, `-n 200000`, PGNs
-  `../engine-arena/ablation-tuned-200k/`): **20,0/40 (50,0 %)**, Elo ±0.
-  MSE-Gewinn übersetzt sich nicht in Stärke — keine Übernahme. Nächste
-  Runde (stärkere Daten) zurückgestellt; Pipeline und Skripte bleiben
-  (`src/tune.rs`, `tools/texel_{gen,data}.py`).
+  `../engine-arena/ablation-tuned-200k/`): **UNGÜLTIG (Befund 23.09.,
+  verifiziert): 20/20 Partiepaare Zug für Zug identisch** (gegenüber 0/20
+  in ttage/nonull). Ursache: `funken-tuned.sh` setzt `FUNKEN_PARAMS`, startet
+  aber `funken-base` — zum Match-Zeitpunkt (23.09. 08:06–08:19) ein Build vom
+  22.09. 16:50, also VOR dem tune.rs-Commit (22.09. 20:22); die Variable wurde
+  stillschweigend ignoriert → Basis gegen Basis, 50 % garantiert. Beleg heute:
+  gleiches Binary mit/ohne `FUNKEN_PARAMS` → Bench 52148 vs. 264705 Knoten
+  (Startpos). Folge: „MSE übersetzt sich nicht in Spielstärke" ist NICHT
+  gemessen; Wiederholung (≥200 Partien, mit Precheck) steht aus. Festes
+  Werkzeug seitdem: `tools/precheck.sh` (Bench-Divergenz + md5 vor, Paar-Check
+  nach jedem Match).
 - Label-Filter-Retune (23.09.2026, ROADMAP-Gate 2): v3-Daten gefiltert auf
   tiefenstabile Such-Eval (10k vs. 50k Knoten, |Δ| ≤ 50 cp, mates raus;
   Werkzeug `/tmp/opencode/label_filter.py`, persistent, ucinewgame/200):
@@ -408,10 +429,15 @@ fremden Labels), Filter ply ≥ 24, kein Schach, nicht nach Schlag/Umwandlung.
   (Holdout **−0,2 %**, Stopp nach Sweep 4). Kein Holdout-Plus → keine
   Ablation (Regel). Nebenbefund: STANDARD liegt auf gefilterten Daten
   schlechter als auf ungefilterten (0,08658 vs. 0,08119) — stabile
-  Positionen tragen kein stärkeres Signal. Tuning-Kapitel zu (v1 Overfit,
-  v3 pari, v3-gefiltert flach).
+  Positionen tragen kein stärkeres Signal. Status seit Befund-Korrektur
+  23.09.: Die Gate-2-Begründung („schwache Labels") ist offen — sie stützte
+  sich auf die UNGÜLTIGE Tuning-Ablation (s. oben). Das Tuning-Urteil als
+  Ganzes ist offen bis zur wiederholten Ablation (≥200, Precheck).
 - LMR-Mikros (23.09.2026, ROADMAP-Gate 1): red1only/late/deep als
   /tmp-Binaries (revertiert), 8 Stellungen × 500k/1M/2M
   (`/tmp/opencode/micro_lmr.py`, Rohdaten `micro_lmr.json`): **keine
   Rettung** (Qxe4/Qxf5/Qd8+) bei ≤ 2M in keiner Variante — alle wie Basis.
-  LMR-Kapitel zu (V4 ohne LMR s. `EXPERIMENTE.md`).
+  Status seit Befund-Korrektur 23.09.: **nur Mikro-Diagnose, kein
+  Stärke-Befund** — „dreht die 8 Stellungen nicht" ≠ „kein Nutzen"
+  (+20–40 Elo wären so unsichtbar). Echte Messung (LMR-late, Nullzug-Marge
+  vs. Basis, ≥200 Partien, Precheck) steht aus.

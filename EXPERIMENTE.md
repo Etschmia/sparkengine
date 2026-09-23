@@ -332,3 +332,20 @@ Hand-Patch trägt. Alle Daten selbst erzeugt (keine fremden Labels).
   Nach Abschluss: PGNs in ein Dir (Präfix a_/b_), EIN texel_data.py-Lauf
   (globaler Dedup + Holdout), zählen, MESSERGEBNISSE. Retune danach ist
   NICHT beauftragt (Folgeentscheidung).
+- 23.09.2026: BEFUND-KORREKTUR (Tobias, verifiziert): Tuning-Ablation vom
+  Morgen (angeblich 20/40 pari) ist UNGÜLTIG — 20/20 Paare identisch
+  (ttage/nonull je 0/20). Ursache verifiziert: Match 08:06–08:19 mit
+  funken-base-Build 22.09. 16:50, tune.rs-Commit („FUNKEN_PARAMS") erst
+  22.09. 20:22 → Variable still ignoriert, Basis vs. Basis. Wirkbeleg heute:
+  gleiches Binary mit/ohne Params → Bench 52148 vs. 264705 Knoten.
+  Folgen: „MSE→Stärke-Lücke", „Tuning-Kapitel zu", Gate-2-Begründung und
+  ROADMAP-Stand („Kapitel zu") sind OFFEN, nicht gemessen. Gate-Schlüsse
+  (Pruning-Sweep, LMR-Mikros) gelten nur als Mikro-Diagnose („dreht die 8
+  Stellungen nicht"), nicht als Stärke-Befund. Neue Regel: Precheck
+  (`tools/precheck.sh`, 4/4 Tests grün: PRE-Abbruch bei identischen
+  Kandidaten, PRE-OK Basis-vs-Tuned, POST-UNGÜLTIG tuned, POST-OK ttage),
+  Mindestgröße 200, nicht-signifikant = offen. Gen4 läuft unberührt weiter;
+  ausstehende Matches (Tuned-Repeat, Nullzug-Marge, LMR-late) starten nach
+  Gen4 (Kerne belegt). HINWEIS: POST-Checks schrieben je eine Zeile in
+  `PRECHECK.log` der fremden Matchdirs (tuned/ttage) — nur Logs, kein
+  PGN angerührt.
