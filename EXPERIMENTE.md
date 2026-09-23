@@ -328,7 +328,17 @@ Hand-Patch trägt. Alle Daten selbst erzeugt (keine fremden Labels).
   (2×1900, Seeds 20260923/24) ≈ 7,2 h, Ertrag ~220k Positionen (v3-Rate
   58/Spiel, 55 % Extrakt).   Dirs `~/engine-arena/texel-gen4-200k/{jobA,jobB}/`,
   Logs `/tmp/opencode/texel_gen4_{A,B}.log` (PIDs 260129/260127, Start
-  21:18 CEST, beide verifiziert produzierend). KEIN QS/SEE, KEIN Rollout. KEIN QS/SEE, KEIN Rollout.
+  21:18 CEST, beide verifiziert produzierend). KEIN QS/SEE, KEIN Rollout.
+- 23.09.2026, 21:40: GEN4-SETUP-PRÜFUNG (Auftrag Tobias, Befund-1-Verdacht):
+  BESTANDEN, Lauf bleibt. Belege: beide Jobs mit korrekten Args
+  (1900 Partien, -n 200000, eigene Dirs/Seeds); `funken-base` md5-identisch
+  mit frischem Release-Build (Code seit Build unverändert — nur Doku/Tools
+  committet); Gen4 nutzt direktes Binary ohne Wrapper/Env (Befund-1-Klasse
+  ausgeschlossen); PGN-Stichprobe: SearchLimit 200000, Zufallsopenings,
+  plausible Ergebnisse (54/72/37 nach 163 Partien). Fehlalarm „Hänger":
+  mtimes 21:39 waren frisch (nicht 3 h alt) — 174 Partien in 22 Min
+  (≈15 s/Partie wie pilotiert), ETA weiter ~04:30. Lehre: vor Hänger-Urteil
+  `date` prüfen. KEIN QS/SEE, KEIN Rollout.
   Nach Abschluss: PGNs in ein Dir (Präfix a_/b_), EIN texel_data.py-Lauf
   (globaler Dedup + Holdout), zählen, MESSERGEBNISSE. Retune danach ist
   NICHT beauftragt (Folgeentscheidung).
