@@ -19,7 +19,7 @@ import chess.pgn
 
 def main():
     pgndir, train_path, hold_path = sys.argv[1], sys.argv[2], sys.argv[3]
-    files = sorted(glob.glob(f"{pgndir}/r*.pgn"))
+    files = sorted(glob.glob(f"{pgndir}/*.pgn"))
     train, hold = [], []
     seen = set()
     n_games, n_pos, n_dup, n_check = 0, 0, 0, 0

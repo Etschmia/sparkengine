@@ -382,3 +382,21 @@ die frische Suche nicht spielt? Methode: Sitzungssimulation (ein Prozess,
 - Einordnung: Bewiesener Flip-Schaden ½ Punkt (JdclEX3n-Remis aus +640) aus
   38 Partien gegen ~+100 Elo TT-Nutzen — TT-Route beendet. Weiter an frisch
   reproduzierbaren Schwächen (E2/E3): Details in `EXPERIMENTE.md`.
+
+### 9.8 Texel-Tuning v1/v3 (22.–23.09.2026, gemessen)
+
+Eval-Params als Struct (39 Knöpfe, T1; Tests 14/14, Bench bit-identisch).
+Tuner `funken texel-tune` (Koordinaten-Abstieg, Sigmoid 1/(1+10^(−s/400))),
+Gewichte per `FUNKEN_PARAMS` ladbar. Daten: eigene Selbstspiele (keine
+fremden Labels), Filter ply ≥ 24, kein Schach, nicht nach Schlag/Umwandlung.
+
+- v1 (100 Spiele, 2642 Positionen): Train 0,100 → 0,072, Holdout 0,081 →
+  0,122 — Lehrbuch-Overfit, keine Übernahme.
+- v3 (1500 Spiele aus 6-Halbzug-Zufallsopenings, 87k Positionen, Holdout
+  balanciert): Train 0,08119 → 0,07656, Holdout 0,07703 → 0,07428 (25 Sweeps,
+  gemeinsam, Early-Stopp nicht ausgelöst). 33/39 Params bewegt.
+- Ablation Basis vs. Tuned (Wrapper, 40 Partien, Buch, `-n 200000`, PGNs
+  `../engine-arena/ablation-tuned-200k/`): **20,0/40 (50,0 %)**, Elo ±0.
+  MSE-Gewinn übersetzt sich nicht in Stärke — keine Übernahme. Nächste
+  Runde (stärkere Daten) zurückgestellt; Pipeline und Skripte bleiben
+  (`src/tune.rs`, `tools/texel_{gen,data}.py`).

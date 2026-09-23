@@ -265,3 +265,27 @@ Hand-Patch trägt. Alle Daten selbst erzeugt (keine fremden Labels).
   Danach: Extractor v2 → ~30k Positionen → Tuning mit Early-Stopp (Holdout).
   Resume: `tail -2 /tmp/opencode/texel_gen2.log`, bei „Serie beendet":
   `python3 tools/texel_data.py ~/engine-arena/texel-gen2-50k <train> <hold>`.
+- 22.09.2026: v2-Datensatz zu klein (1000 Spiele → nur 2507 Positionen:
+  64k Duplikate — deterministische Engine + 40 Buchstellungen = ~80
+  distinkte Partien). Fix v3: 1500 Spiele aus 6-Halbzug-Zufallsopenings
+  (Seed 20260922), tools/texel_gen.py. Stolpern: doppelter Generator
+  (fehlendes mkdir + Timeout-Kill) bereinigt, läuft (PPID 1, setsid).
+- 23.09.2026: T3b v3-ERGEBNIS: Train 0,08119 → 0,07656, Holdout 0,07703 →
+  0,07428 (25 Sweeps, monoton gemeinsam, kein Overfit). 33/39 Params bewegt
+  (u.a. Mobilität hoch, Läuferpaar-eg 40→−19, Turm-7.Reihe 10→54).
+- 23.09.2026: T4 ABLATION Basis vs. Tuned (Wrapper FUNKEN_PARAMS, 40 Partien,
+  Buch, -n 200000, `../engine-arena/ablation-tuned-200k/`): **20,0/40
+  (50,0 %)** — exakt pari, Elo ±0. Texel-MSE (−3,6 % Holdout) übersetzt sich
+  NICHT in Spielstärke (Suche wäscht Statik-Differenzen; schwache Labels).
+  KEINE Übernahme (Gewinn unbelegt). Tuning-Kapitel: Pipeline steht,
+  v3 neutral; nächste Runde bräuchte stärkere Daten (200k) — zurückgestellt.
+  Pruning-Experimente (vereinbart: zum Schluss) als Nächstes.
+- 23.09.2026: PRUNING-MIKROS (8 Stellungen × 200k/1M/5M, frisch): P1 ohne
+  Futility = Basis überall (Ke2 weiter Ke2). P2 Nullzug mit Marge +150 =
+  wie V2/V5 (Qd8+ erst 5M, nicht Blitz-Reichweite); Qxf7-200k schon Rxa1.
+  P3 ohne Aspiration = neutral bis schlechter (Qc8-5M: Blunder c5c8 —
+  Aspiration trug dort mit, wie RFP). Voller Switch-Sweep (RFP/Null/LMR/
+  Futility/Aspiration): KEINE Variante holt Rettungen in Spiel-Budgets
+  (≤2M). Keine Ablation (nichts zu übernehmen). Pruning-Kapitel zu (billig).
+  Resthebel (Projekte): Such-Effizienz global, stärkere Tuning-Daten,
+  Zeitmanagement.

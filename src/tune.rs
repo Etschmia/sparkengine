@@ -182,7 +182,13 @@ pub fn cmd_tune(train_path: &str, hold_path: &str, out_path: &str, sweeps: usize
         .map(|i| (get(&p, i).abs() / 4).max(2))
         .collect();
     let e0 = mse(&train, &p);
-    println!("MSE STANDARD train {e0:.5} hold {:.5}", mse(&hold, &p));
+    let h0 = mse(&hold, &p);
+    println!("MSE STANDARD train {e0:.5} hold {h0:.5}");
+    // Early-Stopping am Holdout (Geduld 3 Sweeps); geschrieben wird das
+    // beste Modell, nicht das letzte (v1-Lehre: monotoner Holdout-Anstieg).
+    let mut best = p;
+    let mut best_hold = h0;
+    let mut patience = 0;
     for sw in 0..sweeps {
         let mut improved = false;
         for i in 0..NAMES.len() {
@@ -206,17 +212,22 @@ pub fn cmd_tune(train_path: &str, hold_path: &str, out_path: &str, sweeps: usize
                 steps[i] /= 2;
             }
         }
-        println!(
-            "sweep {} train {:.5} hold {:.5}{}",
-            sw + 1,
-            mse(&train, &p),
-            mse(&hold, &p),
-            if improved { "" } else { " (kein Fortschritt)" }
-        );
-        if !improved {
+        let (et, eh) = (mse(&train, &p), mse(&hold, &p));
+        let mark = if eh < best_hold {
+            best_hold = eh;
+            best = p;
+            patience = 0;
+            " *"
+        } else {
+            patience += 1;
+            ""
+        };
+        println!("sweep {} train {et:.5} hold {eh:.5}{mark}", sw + 1);
+        if !improved || patience >= 3 {
             break;
         }
     }
-    std::fs::write(out_path, crate::eval::params_to_text(&p)).expect("params schreibbar");
+    println!("best hold {best_hold:.5}");
+    std::fs::write(out_path, crate::eval::params_to_text(&best)).expect("params schreibbar");
     println!("geschrieben: {out_path}");
 }
