@@ -356,7 +356,15 @@ Hand-Patch trägt. Alle Daten selbst erzeugt (keine fremden Labels).
   schlägt die neue Basis. Details 9.11. Kumuliert vs. Handwerte: ~+100.
 - 24.09.2026: ROLLOUT (Tobias, a+b): Gen4 als STANDARD (`959b13e`,
   39/39-Check, Bench-Beweis, Tests/Perft grün), Doku 9.12, gepusht.
-  Bot-Neustart durch Tobias (pull/build/restart auf Bot-System). KEIN QS/SEE, KEIN Rollout.
+  Bot-Neustart durch Tobias (pull/build/restart auf Bot-System).
+- 24.09.2026: BLUNDER-SCHNITT (Bot läuft mit Gen4): Quellschnitt auf
+  SYR-PE-BUTDEV per Upload-Filter `SPARK_ANALYSE_SINCE=2026-09-24T12:34:47Z`
+  (echter Neustart; game_records unangetastet, Timer gestoppt; Stand dort:
+  108 alt, 1 neu = 6bLSKbSO). Lokal `~/voigtsbach_analysen/` KOMPLETT nach
+  `archiv-vor-gen4-20260924/` (inkl. LIESMICH.md → wird neu hochgeladen).
+  Archiv enthält 109 PGNs (108+6bLSKbSO, wird neu hochgeladen — ok).
+  Nächster Schritt (Tobias: Timer starten): erster Lauf lädt 6bLSKbSO,
+  Zahlen 1/1 — danach Verifikation hier (nur started_at ≥ Cutoff). KEIN QS/SEE, KEIN Rollout.
   Nach Abschluss: PGNs in ein Dir (Präfix a_/b_), EIN texel_data.py-Lauf
   (globaler Dedup + Holdout), zählen, MESSERGEBNISSE. Retune danach ist
   NICHT beauftragt (Folgeentscheidung).
