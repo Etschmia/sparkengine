@@ -353,7 +353,10 @@ Hand-Patch trägt. Alle Daten selbst erzeugt (keine fremden Labels).
   Bench-Beweis, `438e01e`), M4-Bestätigung **+63 (CI +28…+100,
   LOS 100 %)** — Details 9.11. Danach Gen4-Match (M5).
 - 24.09.2026: M5 **+51 (CI +15…+88, LOS 99,7 %, signifikant)** — Gen4-Modell
-  schlägt die neue Basis. Details 9.11. Kumuliert vs. Handwerte: ~+100. KEIN QS/SEE, KEIN Rollout.
+  schlägt die neue Basis. Details 9.11. Kumuliert vs. Handwerte: ~+100.
+- 24.09.2026: ROLLOUT (Tobias, a+b): Gen4 als STANDARD (`959b13e`,
+  39/39-Check, Bench-Beweis, Tests/Perft grün), Doku 9.12, gepusht.
+  Bot-Neustart durch Tobias (pull/build/restart auf Bot-System). KEIN QS/SEE, KEIN Rollout.
   Nach Abschluss: PGNs in ein Dir (Präfix a_/b_), EIN texel_data.py-Lauf
   (globaler Dedup + Holdout), zählen, MESSERGEBNISSE. Retune danach ist
   NICHT beauftragt (Folgeentscheidung).

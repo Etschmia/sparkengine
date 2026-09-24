@@ -460,6 +460,15 @@ Commit `438e01e`). Neues Binary ohne Env = Tuned-Knoten (264705/244050/
   SIGNIFIKANT — zweites Plus in Folge (kumuliert vs. Handwerte-Basis
   Größenordnung +100). Übernahme-Kriterium erfüllt; Entscheidung ausstehend.
 
+### 9.12 Gen4-Übernahme + Rollout (24.09.2026, beauftragt)
+
+params_gen4 als `STANDARD` in `src/eval.rs` (39/39 Rundtrip-Check;
+Commit `959b13e`). Neues Binary ohne Env = Gen4-Knoten
+(178955/413880/41507). Tests 14/14, 0 Warnungen, Perft 5 = 4865609.
+Bot-Rollout: Binary auf dem Bot-System aus diesem Stand bauen
+(`/opt/funken/funken`), Config unverändert (kein Env nötig — Tuning steckt
+im Default). Status: gepusht, Neustart durch Tobias.
+
 ### 9.9 Gen4-Datensatz (23.–24.09.2026, beauftragt, gemessen)
 
 3800 Selbstspiele `funken-base` vs. `funken-base`, `-n 200000` (4× v3),
