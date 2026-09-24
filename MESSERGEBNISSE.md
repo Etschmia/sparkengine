@@ -453,6 +453,13 @@ Commit `438e01e`). Neues Binary ohne Env = Tuned-Knoten (264705/244050/
   Elo +63, CI +28…+100, LOS 100,0 %**. POST 100 Paare/0 identisch.
   Replikation von M1 (+56) — Übernahme damit doppelt belegt.
 
+- **M5 Gen4-Modell (params_gen4-Wrapper) vs. neue Basis, 200 Partien**
+  (`match-gen4-200k/`, Seed 105, Wrapper `funken-gen4.sh` auf neuem Binary):
+  aus Gen4-Sicht **114,5 : 85,5 (+71 =87 −42), 57,25 %, Elo +51,
+  CI +15…+88, LOS 99,7 %**. POST 100 Paare/1 identisch (OK).
+  SIGNIFIKANT — zweites Plus in Folge (kumuliert vs. Handwerte-Basis
+  Größenordnung +100). Übernahme-Kriterium erfüllt; Entscheidung ausstehend.
+
 ### 9.9 Gen4-Datensatz (23.–24.09.2026, beauftragt, gemessen)
 
 3800 Selbstspiele `funken-base` vs. `funken-base`, `-n 200000` (4× v3),

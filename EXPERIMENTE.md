@@ -351,7 +351,9 @@ Hand-Patch trägt. Alle Daten selbst erzeugt (keine fremden Labels).
   verifiziert (100 Paare, 0 identisch). Details `MESSERGEBNISSE.md` 9.10.
 - 24.09.2026: ÜBERNAHME (Tobias): params_v3 als STANDARD (39/39-Check,
   Bench-Beweis, `438e01e`), M4-Bestätigung **+63 (CI +28…+100,
-  LOS 100 %)** — Details 9.11. Danach Gen4-Match (M5). KEIN QS/SEE, KEIN Rollout.
+  LOS 100 %)** — Details 9.11. Danach Gen4-Match (M5).
+- 24.09.2026: M5 **+51 (CI +15…+88, LOS 99,7 %, signifikant)** — Gen4-Modell
+  schlägt die neue Basis. Details 9.11. Kumuliert vs. Handwerte: ~+100. KEIN QS/SEE, KEIN Rollout.
   Nach Abschluss: PGNs in ein Dir (Präfix a_/b_), EIN texel_data.py-Lauf
   (globaler Dedup + Holdout), zählen, MESSERGEBNISSE. Retune danach ist
   NICHT beauftragt (Folgeentscheidung).
