@@ -364,7 +364,10 @@ Hand-Patch trägt. Alle Daten selbst erzeugt (keine fremden Labels).
   `archiv-vor-gen4-20260924/` (inkl. LIESMICH.md → wird neu hochgeladen).
   Archiv enthält 109 PGNs (108+6bLSKbSO, wird neu hochgeladen — ok).
   Nächster Schritt (Tobias: Timer starten): erster Lauf lädt 6bLSKbSO,
-  Zahlen 1/1 — danach Verifikation hier (nur started_at ≥ Cutoff). KEIN QS/SEE, KEIN Rollout.
+  Zahlen 1/1 — danach Verifikation hier (nur started_at ≥ Cutoff).
+- 24.09.2026: ARCHIV-ENTSCHEIDUNG (Tobias): 6bLSKbSO bleibt als Kopie im
+  Archiv (109 statt 108) — keine Bereinigung, kein Todo. „Martuni" in
+  Upload-Richtung bin ich; Befund (0 Blunder aus 6bLSKbSO) protokolliert. KEIN QS/SEE, KEIN Rollout.
   Nach Abschluss: PGNs in ein Dir (Präfix a_/b_), EIN texel_data.py-Lauf
   (globaler Dedup + Holdout), zählen, MESSERGEBNISSE. Retune danach ist
   NICHT beauftragt (Folgeentscheidung).
