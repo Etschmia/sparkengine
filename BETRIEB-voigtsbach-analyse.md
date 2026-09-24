@@ -86,7 +86,7 @@ Dienst ausgeliefert wurde, bevor die Zustimmung vorlag.
 
 ```
 <REMOTE_DIR>/analysen/voigtsbach-blunders.json
-<REMOTE_DIR>/games.json         (Metadaten ALLER Partien, auch unanalysierter)
+<REMOTE_DIR>/games.json         (Metadaten ALLER Partien seit Stichtag, auch unanalysierter)
 <REMOTE_DIR>/status.json
 <REMOTE_DIR>/LIESMICH.md        (einmalig, Orientierung für Spark)
 ```
@@ -101,6 +101,66 @@ Standes, nicht des zuletzt berechneten: Sie wird erst nach erfolgreichem
 Upload geschrieben. Ein Trockenlauf (`--no-publish`) legt sie deshalb nicht
 an — täte er es, hielte der nächste echte Lauf den Remote-Stand für aktuell
 und überspränge den Upload.
+
+## Stichtag-Schnitt bei Engine-Wechsel
+
+**Zweck:** Funken wird auf martuni.de weiterentwickelt. Ausgewertet werden
+dort nur die Lichess-Partien, die **seit der letzten Engine-Änderung**
+gespielt wurden. Nur diese sagen etwas über den aktuellen Stand aus.
+Voigtsbachs Zähler auf Martuni (gespielt / analysiert) soll deshalb bei jedem
+Engine-Wechsel wieder bei 0 anfangen.
+
+**Mechanik:** `SPARK_ANALYSE_SINCE` in `analyse.env` (ISO, UTC). Partien, deren
+`UTCDate`/`UTCTime` vor dem Stichtag liegt, fallen aus **allem**, was
+hochgeladen wird: PGN-Sync, `games.json`, `status.json` und Blunder-JSON.
+`status.json` trägt den Wert als `published_since`. Lokal bleibt alles
+vollständig, also `game_records/` und die kumulative
+`voigtsbach-blunders.json`. Nichts wird neu analysiert.
+
+**Nicht** `game_records/` leeren oder verschieben: `angstgegner.py` und
+`analyze_opponents.py` in `lichess-bot/` lesen dort die Gegnerhistorie.
+Auch die lokale Blunder-JSON nicht rotieren, der Filter reicht.
+
+**Warum Martuni allein nicht archivieren kann:** Der Upload vergleicht, was
+*auf Martuni* in `pgn/` liegt (nur oberste Ebene), und kopiert alles
+Fehlende nach. Die drei JSON-Dateien werden jedes Mal komplett ersetzt.
+Ohne Stichtag hier lädt der nächste Lauf also den ganzen Altbestand wieder
+hoch.
+
+### Ablauf (zuletzt 24.09.2026, Gen4)
+
+1. Engine bauen, Bot neu starten (graceful, siehe `BETRIEB-voigtsbach.md`
+   im lichess-bot). Stichtag ist der **echte Neustart-Zeitpunkt** in UTC:
+
+   ```bash
+   date -u -d "$(systemctl show lichess-bot-voigtsbach.service \
+       -p ActiveEnterTimestamp --value)" +%FT%TZ
+   ```
+
+   Nicht die Zeit der letzten hochgeladenen Partie nehmen: Eine Partie kann
+   nach dem Neustart begonnen haben und schon oben liegen. Am 24.09. war das
+   `6bLSKbSO` (Start 12:37:14Z, Neustart 12:34:47Z), also schon Gen4.
+2. `sudo systemctl stop voigtsbach-analyse.timer`
+3. In `analyse.env` `SPARK_ANALYSE_SINCE=<Stichtag>` setzen und den
+   Kommentar darüber anpassen. Offline prüfen, was künftig rausgeht:
+
+   ```bash
+   set -a && . ../voigtsbach-analyse/analyse.env && set +a
+   python3 -c "import sys; sys.path.insert(0,'tools'); import analyse_voigtsbach as a; \
+       print([p.name for p in a.publishable_pgns()])"
+   ```
+4. Den Abschnitt „Stichtag“ in `voigtsbach-analyse/LIESMICH.md` anpassen.
+5. Martuni melden: Stichtag, Zahlen alt/neu. Martuni verschiebt den
+   **gesamten** Inhalt von `~/voigtsbach_analysen/` in ein Archiv, z. B.
+   `archiv-vor-<engine>-<datum>/`. `LIESMICH.md` gehört dazu, denn es wird
+   nur hochgeladen, wenn es fehlt.
+6. Nach Martunis OK: `sudo systemctl start voigtsbach-analyse.timer` und
+   `sudo systemctl start voigtsbach-analyse.service` für einen Sofortlauf.
+   Prüfen: `status.json` auf Martuni zeigt nur die Partien ab Stichtag und
+   `published_since`.
+
+Das lokale Log schreibt weiter die lokale Gesamtzahl („N analysed“). Die
+hochgeladenen Zahlen stehen in der `Published …`-Zeile.
 
 ## Varianten-Wächter
 
