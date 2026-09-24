@@ -103,11 +103,11 @@ behandelt (`go ponder` = Suche bis `stop`).
 
 - Spielstärke gemessen ≈ Stockfish-17-Limiter Stufe 1900 bei 300 ms/Zug
   (4 Partien, Kleinstsample — keine Elo-Behauptung, Details in MESSERGEBNISSE.md).
-- Eröffnungsspiel eigenwillig (kein Buch — Vorgabe; Figuren zuerst).
-  Eigene Mini-Eröffnungsauswahl wäre regelkonform möglich, fehlt noch.
-- Kein SMP, kein Ponder, keine Endspieldatenbanken, keine Aufgabe/Remisangebote
-  (bewusste Deaktivierung in der Bridge: jede Partieentscheidung aus eigener
-  Berechnung; Matt/Remis adjudiziert Lichess).
+- Eröffnungsspiel eigenwillig (derzeit ohne Buch; Figuren zuerst).
+  Eigene Mini-Eröffnungsauswahl wäre möglich, fehlt noch.
+- Kein SMP, kein Ponder, keine Endspieldatenbanken eingebunden, keine Aufgabe/Remisangebote
+  (Bridge-Beispiel mit Fremdquellen derzeit aus; Zugentscheidung aus eigener
+  Suche; Matt/Remis adjudiziert Lichess).
 - Nur Standard-Schach; Chess960/Varianten abgelehnt.
 - Eval-Gewichte ungetunt (Handwerte); systematisches Tuning (z. B. SPSA mit
   selbst erzeugten Daten) ist die größte Stärke-Reserve.

@@ -5,9 +5,10 @@
 # - Kein Geheimnis in diese Datei schreiben. Das Bot-Token wird zur Laufzeit
 #   aus der Umgebungsvariable LICHESS_TOKEN gelesen (siehe start.sh bzw.
 #   das systemd-Unit funken.service mit EnvironmentFile).
-# - Alle fremden Zugquellen sind bewusst DEAKTIVIERT: keine Eroeffnungsbuecher
-#   (lokal/online), keine Cloud-Analyse, keine Endspieldatenbanken, kein
-#   Ponder. Jeder Zug stammt aus Funkens eigener Berechnung.
+# - Fremdquellen sind in diesem Beispiel DEAKTIVIERT (Standard, optional
+#   aktivierbar): keine Eroeffnungsbuecher (lokal/online), keine Cloud-Analyse,
+#   keine Endspieldatenbanken, kein Ponder. Die Engine selbst rechnet ohne
+#   Buch/Tablebase; jeder Engine-Zug stammt aus eigener Suche/Bewertung.
 # - Aufgeben/Remis-Anbieten durch die Bridge ist deaktiviert: Die Engine
 #   kennt kein Resign/Draw-Offer per UCI; Partien enden durch Matt oder die
 #   offiziellen Remisregeln, die Lichess selbst adjudiziert.

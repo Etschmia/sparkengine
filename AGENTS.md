@@ -7,11 +7,14 @@ ein Experiment in eigenständiger KI-Entwicklung: Der schachliche Kern
 
 ## Harte Regeln (nicht verhandelbar)
 
-1. **Keine Engine-Übernahmen:** Keinen Code bestehender Engines klonen, portieren
+1. **Kein Code kopieren:** Keinen Code bestehender Engines klonen, portieren
    oder übersetzen; keine Wrapper um Stockfish & Co.; keine fremden
    Bewertungsnetze, Gewichtstabellen oder Trainingslabels. Etablierte Verfahren
    aus Lehrbuchliteratur selbst implementieren ist ok — als Bauvorlage dienender
-   Engine-Quellcode ist es nicht.
+   Engine-Quellcode ist es nicht. Reine Datendateien (Endspieltabellen,
+   Eröffnungsbücher) fallen nicht unter dieses Verbot; Lese-/Sondierungscode
+   dafür muss ebenfalls selbst implementiert sein, Einbau je Feature als eigene
+   Entscheidung mit Messung.
 2. **Keine Geheimnisse:** Keine Tokens, API-Keys oder Zugangsdaten in Code,
    Config-Beispiele, Logs oder Commits. Lichess-Token läuft ausschließlich über
    die Env-Var `LICHESS_BOT_TOKEN` (vgl. `lichess/`).
@@ -19,9 +22,6 @@ ein Experiment in eigenständiger KI-Entwicklung: Der schachliche Kern
    ohne Messung versprechen. Gemessen vs. ausstehend strikt trennen
    (`MESSERGEBNISSE.md`, Abschnitt 6 pflegen). Schlägt ein Ansatz fehl: Ursache
    analysieren, selbst ändern, knapp protokollieren.
-4. **Spielbetrieb = eigene Berechnung:** Externe Engines/Cloud/Bücher/Tablebases
-   nur als klar getrennte Testreferenz (z. B. `tests_match.py`, python-chess als
-   Schiedsrichter), niemals als Zugquelle im laufenden Betrieb.
 
 ## Bauen, Testen, Messen
 
@@ -48,8 +48,8 @@ Vor jedem Commit: `cargo test`, Release-Build ohne Warnungen
 - `src/uci.rs` — UCI-Schleife, Suche im Worker-Thread; **jede Ausgabezeile wird
   geflusht** (Pipes sind blockgepuffert — nie `println!` ohne Flush verwenden).
 - `src/main.rs` — Dispatch: UCI (default), `perft <tiefe> [fen]`, `bench`.
-- `lichess/` — Bridge-Anbindung (offizielles `lichess-bot`), Beispiel-Config mit
-  allen Fremdquellen deaktiviert, `setup.sh`/`start.sh`/`funken.service`.
+- `lichess/` — Bridge-Anbindung (offizielles `lichess-bot`), Beispiel-Config
+  (Fremdquellen dort derzeit deaktiviert, optional), `setup.sh`/`start.sh`/`funken.service`.
 
 ## Konventionen
 

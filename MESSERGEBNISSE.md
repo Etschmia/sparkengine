@@ -146,6 +146,14 @@ beweist weder Spielstärke noch Schadensfreiheit des Fix.
   heißt „offen", nicht „tot"; Übernahme nur mit gemessenem Plus.
 - Patzer-Repro: Stellung + Uhrstand + TT-Zustand des nächsten Einzug-Patzers
   sichern (Abschnitt 9.3, nächste Schritte).
+- Endspieltabellen (Syzygy, `~/syzygy/3-4-5` liegt vor) und Eröffnungsbuch
+  (Polyglot): nicht eingebunden. Betreiber-Entscheidung 24.09.2026: reine
+  Datendateien fallen nicht unter das Code-Kopierverbot (AGENTS.md Regel 1),
+  Einbau je Feature als eigene Entscheidung mit Messung; Sondierungs-/Lesecode
+  müsste selbst implementiert werden (std-only, kein fremder Probe-Code).
+  Zurückgestellt weil: Syzygy-Sondierung ohne Referenz-Code als Vorlage ein
+  Mehrwochen-Risiko wäre, ein Fremdbuch die Eröffnungsmessung dominieren würde
+  und die Engine gerade demonstrieren soll, was eigene Suche/Bewertung leisten.
 
 ## 7. Lichess-Anbindung: Validierungsstand (ausgeführt, ohne Token)
 
@@ -154,8 +162,8 @@ beweist weder Spielstärke noch Schadensfreiheit des Fix.
 - Eigene `config.yml.example` gegen den echten Config-Loader geprüft:
   **„Engine configuration OK"**; einziger Fehler danach die erwartete
   API-Auth-Ablehnung des Dummy-Tokens (Netz funktioniert, Auth fehlt).
-- Deaktiviert nachweislich: Bücher (polyglot/online), Cloud-Analyse, EGTB,
-  Ponder, fremdes Aufgeben/Remis. Engine-UCI-Optionen der Bridge
+- Im Beispiel derzeit deaktiviert: Bücher (polyglot/online), Cloud-Analyse, EGTB,
+  Ponder, fremdes Aufgeben/Remis (optional aktivierbar, kein Verbot mehr). Engine-UCI-Optionen der Bridge
   (`Move Overhead`, `Threads`, `Hash`) werden akzeptiert.
 - `setup.sh`/`start.sh`/`funken.service` lokal syntaktisch geprüft (`bash -n`,
   systemd-Unit gegen Checkliste); Installation auf dem Zielrechner steht aus.

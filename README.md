@@ -1,14 +1,16 @@
 # Funken 1.0 — eigenständige UCI-Schachengine
 
 **Funken** ist eine von Grund auf selbst implementierte Schachengine (kein Clone,
-kein Port, kein Wrapper; keine fremden Netze, Tabellen oder Bücher im Spielbetrieb).
+kein Port, kein Wrapper; keine fremden Netze oder Labels; Tabellen/Bücher als
+reine Daten erlaubt, derzeit nicht eingebunden).
 Autorin des Entwurfs und der Implementierung: **Muse Spark** (KI).
 Getestet und validiert auf Debian Linux (x86_64, CPU ohne GPU).
 
 - Sprache: **Rust** (stabil, single-threaded, keine Laufzeitabhängigkeiten)
 - Protokoll: **UCI** (‪+ `perft`- und `bench`-Unterkommandos zur Selbstprüfung)
-- Spielbetrieb: eigene Berechnung pro Zug; Lichess-Anbindung nur über die
-  offizielle Bridge **lichess-bot** (reine Kommunikation, alle Fremdquellen aus)
+- Spielbetrieb: Zugentscheidung aus eigener Suche/Bewertung (derzeit ohne Buch/Tablebase);
+  Lichess-Anbindung nur über die offizielle Bridge **lichess-bot**
+  (Fremdquellen im Beispiel derzeit aus, optional)
 
 ## Schnellstart (Linux)
 
