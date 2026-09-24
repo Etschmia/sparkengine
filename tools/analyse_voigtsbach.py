@@ -71,6 +71,12 @@ SCHLEUSE_OUTBOX = _env(
 # Run only when at most this many PGNs wait in the Martuni outbox.
 QUEUE_THRESHOLD = int(_env("SPARK_ANALYSE_QUEUE_THRESHOLD", "0"))
 
+# Cut-off for what gets published (ISO, UTC, e.g. 2026-09-24T12:37:15Z). Games
+# that started earlier stay in the local archive and the local cumulative JSON
+# but are no longer uploaded: the remote side archived them and must not get
+# them back. Empty = publish everything.
+PUBLISH_SINCE = _env("SPARK_ANALYSE_SINCE", "").strip()
+
 LOG_PATH = Path(_env("SPARK_ANALYSE_LOG_PATH", str(WORK_DIR / "analyse_voigtsbach.log")))
 
 
@@ -139,6 +145,8 @@ def collect_games() -> list[dict]:
         date, clock = h.get("UTCDate", ""), h.get("UTCTime", "")
         if date and clock:
             started = f"{date.replace('.', '-')}T{clock}Z"
+        if not after_cutoff(started):
+            continue  # archived on the remote side, see SPARK_ANALYSE_SINCE
 
         games.append({
             "pgn": pgn.name,
@@ -151,6 +159,47 @@ def collect_games() -> list[dict]:
         })
     games.sort(key=lambda g: (g["started_at"] or "", g["pgn"]))
     return games
+
+
+def pgn_started_at(pgn: Path) -> str | None:
+    h = pgn_headers(pgn.read_text(encoding="utf-8", errors="replace"))
+    date, clock = h.get("UTCDate", ""), h.get("UTCTime", "")
+    if date and clock:
+        return f"{date.replace('.', '-')}T{clock}Z"
+    return None
+
+
+def after_cutoff(started_at: str | None) -> bool:
+    """True if a game started at `started_at` is to be published.
+
+    Both sides are ISO strings in the same Z format, so string comparison is
+    chronological. A game without a start time is treated as old: publishing
+    it by accident would undo the remote archive, withholding it costs little.
+    """
+    if not PUBLISH_SINCE:
+        return True
+    return started_at is not None and started_at >= PUBLISH_SINCE
+
+
+def publishable_pgns() -> list[Path]:
+    return [p for p in sorted(GAME_DIR.glob("*.pgn")) if after_cutoff(pgn_started_at(p))]
+
+
+def filtered_output(output: Path, keep: set[str]) -> tuple[Path, int, int]:
+    """Copy of the cumulative result restricted to the PGNs in `keep`.
+
+    The local file stays complete (analyze_blunders.py needs it to skip
+    already-analysed games); only the upload is cut.
+    """
+    data = json.loads(output.read_text(encoding="utf-8"))
+    data["analyzed_pgns"] = [n for n in data.get("analyzed_pgns", []) if n in keep]
+    data["blunders"] = [
+        b for b in data.get("blunders", [])
+        if b.get("game_id", "").split(".pgn")[0] + ".pgn" in keep
+    ]
+    tmp = WORK_DIR / (OUTPUT_NAME + ".publish.tmp")
+    tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return tmp, len(data["analyzed_pgns"]), len(data["blunders"])
 
 
 def games_path() -> Path:
@@ -264,7 +313,7 @@ def sync_pgns() -> int:
             check=True,
         ).stdout.split("\0") if n
     }
-    missing = [p for p in sorted(GAME_DIR.glob("*.pgn")) if p.name not in have]
+    missing = [p for p in publishable_pgns() if p.name not in have]
     for pgn in missing:
         # .tmp + mv, so a reader never sees a half-written game
         remote = f"{remote_dir}/{pgn.name}"
@@ -296,6 +345,10 @@ def publish(output: Path, analysed: int, blunders: int, games: list[dict] | None
             )
             log("Uploaded LIESMICH.md")
 
+    if PUBLISH_SINCE:
+        output, analysed, blunders = filtered_output(
+            output, {p.name for p in publishable_pgns()}
+        )
     remote_json = f"{REMOTE_DIR}/analysen/{OUTPUT_NAME}"
     scp_to(output, remote_json + ".tmp")
     ssh(f"mv {shlex.quote(remote_json + '.tmp')} {shlex.quote(remote_json)}", check=True)
@@ -319,6 +372,7 @@ def publish(output: Path, analysed: int, blunders: int, games: list[dict] | None
         "games_file": "games.json",
         "pgn_dir": "pgn/",
         "pgn_files": pgn_count,
+        "published_since": PUBLISH_SINCE or None,
     }
     if games is not None:
         remote_games = f"{REMOTE_DIR}/games.json"
