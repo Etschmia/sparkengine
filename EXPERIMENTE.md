@@ -348,7 +348,10 @@ Hand-Patch trägt. Alle Daten selbst erzeugt (keine fremden Labels).
   M1 Tuned-Repeat **+56 Elo (CI +18…+95, LOS 99,8 %, signifikant)**;
   M2 Nullzug-Marge −21 n.s. (offen); M3 LMR-late −3 pari (offen).
   Precheck-Bug (Glob nur 49/100 Paare) gefunden + gefixt, M1/M2 nachträglich
-  verifiziert (100 Paare, 0 identisch). Details `MESSERGEBNISSE.md` 9.10. KEIN QS/SEE, KEIN Rollout.
+  verifiziert (100 Paare, 0 identisch). Details `MESSERGEBNISSE.md` 9.10.
+- 24.09.2026: ÜBERNAHME (Tobias): params_v3 als STANDARD (39/39-Check,
+  Bench-Beweis, `438e01e`), M4-Bestätigung **+63 (CI +28…+100,
+  LOS 100 %)** — Details 9.11. Danach Gen4-Match (M5). KEIN QS/SEE, KEIN Rollout.
   Nach Abschluss: PGNs in ein Dir (Präfix a_/b_), EIN texel_data.py-Lauf
   (globaler Dedup + Holdout), zählen, MESSERGEBNISSE. Retune danach ist
   NICHT beauftragt (Folgeentscheidung).

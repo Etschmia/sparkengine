@@ -442,6 +442,17 @@ fremden Labels), Filter ply ≥ 24, kein Schach, nicht nach Schlag/Umwandlung.
   (+20–40 Elo wären so unsichtbar). Echte Messung (LMR-late, Nullzug-Marge
   vs. Basis, ≥200 Partien, Precheck) steht aus.
 
+### 9.11 Übernahme v3-Params + Bestätigungs-Match (24.09.2026, beauftragt)
+
+`src/eval.rs`-STANDARD = params_v3 (39/39 per Rundtrip-Check verifiziert;
+Commit `438e01e`). Neues Binary ohne Env = Tuned-Knoten (264705/244050/
+33743). Tests 14/14, 0 Warnungen, Perft 5 = 4865609.
+
+- **M4 neue vs. alte Basis, 200 Partien** (`match-tuned-confirm-200k/`,
+  Seed 104): aus neuer Sicht **118 : 82 (+73 =90 −37), 59,0 %,
+  Elo +63, CI +28…+100, LOS 100,0 %**. POST 100 Paare/0 identisch.
+  Replikation von M1 (+56) — Übernahme damit doppelt belegt.
+
 ### 9.9 Gen4-Datensatz (23.–24.09.2026, beauftragt, gemessen)
 
 3800 Selbstspiele `funken-base` vs. `funken-base`, `-n 200000` (4× v3),
