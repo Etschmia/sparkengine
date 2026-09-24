@@ -441,3 +441,21 @@ fremden Labels), Filter ply ≥ 24, kein Schach, nicht nach Schlag/Umwandlung.
   Stärke-Befund** — „dreht die 8 Stellungen nicht" ≠ „kein Nutzen"
   (+20–40 Elo wären so unsichtbar). Echte Messung (LMR-late, Nullzug-Marge
   vs. Basis, ≥200 Partien, Precheck) steht aus.
+
+### 9.9 Gen4-Datensatz (23.–24.09.2026, beauftragt, gemessen)
+
+3800 Selbstspiele `funken-base` vs. `funken-base`, `-n 200000` (4× v3),
+Zufalls-Eröffnungen (6 Halbzüge, Seeds 20260923/24, 2 Jobs à 1900 auf
+2 Kernen, ~10 h). PGNs `../engine-arena/texel-gen4-200k/{jobA,jobB}/`
+(+ `/merged/` mit Präfix a_/b_ für den Extrakt).
+
+- Extrakt (`tools/texel_data.py`, Filter wie v3: ply ≥ 24, kein Schach,
+  nicht nach Schlag/Umwandlung, globaler Dedup, Holdout partieweise):
+  **231660 Positionen (train 208160, holdout 23500)** aus 415224 Halbzügen
+  (109,3/Partie, Extrakt 56 % wie v3). Dup 13484, schach/beendet 105753.
+- Verteilung: 37 % 1-0 / 38 % Remis / 25 % 0-1 (Weiß-Score 56 % —
+  Anzugsvorteil im Selbstspiel bei 200k, vgl. v3 54,5 %).
+- TSVs (flüchtig, `/tmp`): `texel4_{train,hold}.tsv`. Reproduzierbar aus
+  den PGNs (dauerhaft in `../engine-arena/`).
+- Verwendung ausstehend (nicht beauftragt): Retune auf Gen4 + Holdout, nur
+  bei Plus weiter zur Ablation (≥200, Precheck).

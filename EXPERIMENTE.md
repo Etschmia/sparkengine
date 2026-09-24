@@ -338,7 +338,12 @@ Hand-Patch trägt. Alle Daten selbst erzeugt (keine fremden Labels).
   plausible Ergebnisse (54/72/37 nach 163 Partien). Fehlalarm „Hänger":
   mtimes 21:39 waren frisch (nicht 3 h alt) — 174 Partien in 22 Min
   (≈15 s/Partie wie pilotiert), ETA weiter ~04:30. Lehre: vor Hänger-Urteil
-  `date` prüfen. KEIN QS/SEE, KEIN Rollout.
+  `date` prüfen.
+- 24.09.2026, 07:34: GEN4 FERTIG: beide Jobs 1900/1900 (Prozesse beendet).
+  Extrakt aus `/merged/` (a_/b_-Präfix, ein Lauf): 3800 Partien →
+  **231660 Positionen (train 208160, hold 23500)**, Ziel ≥200k übertroffen.
+  Plausibel: 109,3 Halbzüge/Partie, Extrakt 56 %, Weiß-Score 56 %,
+  Dup 13k. Details `MESSERGEBNISSE.md` 9.9. Retune NICHT beauftragt. KEIN QS/SEE, KEIN Rollout.
   Nach Abschluss: PGNs in ein Dir (Präfix a_/b_), EIN texel_data.py-Lauf
   (globaler Dedup + Holdout), zählen, MESSERGEBNISSE. Retune danach ist
   NICHT beauftragt (Folgeentscheidung).
