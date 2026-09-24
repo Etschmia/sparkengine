@@ -45,9 +45,11 @@ python3 - "$DIR" <<'PY'
 import glob, os, sys
 import chess.pgn
 d = sys.argv[1]
-files = sorted(glob.glob(os.path.join(d, 'r[0-9][0-9]_*.pgn')))
+files = sorted(glob.glob(os.path.join(d, 'r*_*.pgn')))
 games = []
 for f in files:
+    if not os.path.basename(f).startswith('r'):
+        continue
     g = chess.pgn.read_game(open(f))
     if g is not None:
         games.append([m.uci() for m in g.mainline_moves()])

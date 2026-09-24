@@ -343,7 +343,12 @@ Hand-Patch trägt. Alle Daten selbst erzeugt (keine fremden Labels).
   Extrakt aus `/merged/` (a_/b_-Präfix, ein Lauf): 3800 Partien →
   **231660 Positionen (train 208160, hold 23500)**, Ziel ≥200k übertroffen.
   Plausibel: 109,3 Halbzüge/Partie, Extrakt 56 %, Weiß-Score 56 %,
-  Dup 13k. Details `MESSERGEBNISSE.md` 9.9. Retune NICHT beauftragt. KEIN QS/SEE, KEIN Rollout.
+  Dup 13k. Details `MESSERGEBNISSE.md` 9.9. Retune NICHT beauftragt.
+- 24.09.2026: „LEG LOS" (Tobias): Retune Gen4 → −4,0 % Holdout (echt);
+  M1 Tuned-Repeat **+56 Elo (CI +18…+95, LOS 99,8 %, signifikant)**;
+  M2 Nullzug-Marge −21 n.s. (offen); M3 LMR-late −3 pari (offen).
+  Precheck-Bug (Glob nur 49/100 Paare) gefunden + gefixt, M1/M2 nachträglich
+  verifiziert (100 Paare, 0 identisch). Details `MESSERGEBNISSE.md` 9.10. KEIN QS/SEE, KEIN Rollout.
   Nach Abschluss: PGNs in ein Dir (Präfix a_/b_), EIN texel_data.py-Lauf
   (globaler Dedup + Holdout), zählen, MESSERGEBNISSE. Retune danach ist
   NICHT beauftragt (Folgeentscheidung).

@@ -459,3 +459,34 @@ Zufalls-Eröffnungen (6 Halbzüge, Seeds 20260923/24, 2 Jobs à 1900 auf
   den PGNs (dauerhaft in `../engine-arena/`).
 - Verwendung ausstehend (nicht beauftragt): Retune auf Gen4 + Holdout, nur
   bei Plus weiter zur Ablation (≥200, Precheck).
+
+### 9.10 Retune Gen4 + drei gültige Matches (24.09.2026, beauftragt, gemessen)
+
+Retune auf Gen4 (25 Sweeps, `funken texel-tune`, Log
+`/tmp/opencode/tune_gen4.log`, Params `/tmp/opencode/params_gen4.txt`):
+STANDARD train 0,07595/hold 0,08609 → best (Sweep 25, monoton gemeinsam)
+train **0,07243 (−4,6 %)** / hold **0,08262 (−4,0 %)**. Erstes echtes
+Holdout-Plus auf starken Daten (v3: −3,6 %, Filter: −0,2 %). Match des
+Gen4-Modells steht aus (Folgeentscheidung).
+
+Alle Matches: `tools/match_random.py` (100 Farbtausch-Paare aus
+Zufallsopenings, `-n 200000`, Precheck pre/post, Auswertung
+`auswertung.py`). POST je 100 Paare / ≤1 identisch (M1/M2 nachträglich per
+gefixtem POST verifiziert — der ursprüngliche Glob zählte nur 49 Paare;
+Fix in `tools/precheck.sh`).
+
+- **M1 Basis vs. Tuned (params_v3), 200 Partien** (PGNs
+  `../engine-arena/match-tuned-repeat-200k/`): aus Tuned-Sicht **116 : 84
+  (+79 =74 −47), 58,0 %, Elo +56, 95-%-Bereich +18…+95, LOS 99,8 %**.
+  SIGNIFIKANT — erster gemessener Stärkegewinn (die alte „pari"-Aussage war
+  das ungültige Match). Übernahme-Kriterium (LOS ≥ ~95 %) erfüllt;
+  Übernahme-Entscheidung ausstehend.
+- **M2 Basis vs. Nullzug-Marge+150, 200 Partien** (`match-nullm150-200k/`):
+  aus Basis-Sicht 106 : 94 (+63 =86 −51), 53 %, Elo +21, CI −15…+58,
+  LOS 86,9 % → Variante −21, **nicht signifikant = offen** (Tendenz: Marge
+  schadet leicht). Keine Übernahme.
+- **M3 Basis vs. LMR-late, 200 Partien** (`match-lmr-late-200k/`): aus
+  Basis-Sicht 99 : 101 (+54 =90 −56), 49,5 %, Elo −3, CI −39…+32,
+  LOS 42,4 % → **exakt pari = offen**. Nebenbefund: Tiefe 10 vs. 9
+  (späteres LMR kostet den erwarteten Ply, bringt aber nichts). Keine
+  Übernahme.

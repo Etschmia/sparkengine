@@ -6,23 +6,17 @@ einlesen, dann bei **Empfehlung** fortfahren. Details in `EXPERIMENTE.md`
 
 ## Empfehlung (nächster Schritt)
 
-Korrektur 23.09. (Befund Tobias, verifiziert): Die Tuning-Ablation
-(Basis vs. Tuned 20/40) war UNGÜLTIG (20/20 identische Paare — Wrapper-Env
-von altem Binary ignoriert). Damit sind „Tuning-Kapitel zu",
-„Pruning-/LMR-Kapitel zu" und die Gate-2-Begründung OFFEN, nicht gemessen.
-Mikro-Gates („dreht die 8 Stellungen nicht") sind kein Stärke-Kriterium.
+Stand 24.09. mittags — Ernte (Details `MESSERGEBNISSE.md` 9.9/9.10):
 
-Laufend: **Gen4** (beauftragt, 2 Jobs, ETA ~04:30 — NICHT anfassen).
-Danach in dieser Reihenfolge (Kerne bis dahin belegt):
+- **Tuned (params_v3) +56 Elo, LOS 99,8 % (M1, 200 Partien).** Übernahme-
+  Kriterium erfüllt. Vorschlag: `FUNKEN_PARAMS`-Default ins Binary
+  übernehmen (= Tuned als neue Basis) + per Folge-Match absichern; dann
+  Gen4-Modell (params_gen4, −4,0 % Holdout) gegen die neue Basis messen.
+  Entscheidung (Rollout/Bot) bei Tobias — nichts ohne Auftrag übernehmen.
+- Nullzug-Marge (−21 n.s.) und LMR-late (−3 pari): offen, keine Übernahme.
+- Danach erst: QS/SEE-Entscheidung, Zeitmanagement.
 
-1. **Extrakt** Gen4 → zählen (Ziel ≥ 200k), MESSERGEBNISSE.
-2. **Tuned-Repeat:** Basis vs. params_v3-Wrapper, ≥ 200 Partien,
-   Zufallsopenings (> 20), mit `tools/precheck.sh`. Ergebnis Elo + CI + LOS.
-3. **Varianten-Matches** Nullzug-Marge (+150), LMR-late vs. Basis (je ≥ 200,
-   Precheck). Die 8 Stellungen bleiben Diagnose, kein Kriterium.
-4. Erst danach: QS/SEE-Entscheidung, Zeitmanagement.
-
-Kein Langlauf ohne expliziten Auftrag starten (Gen4 ausgenommen, läuft).
+Laufend: nichts (alle Jobs beendet). Kein Langlauf ohne expliziten Auftrag.
 
 ## Stand (Lesestoff für den Einstieg, 10 Minuten)
 
