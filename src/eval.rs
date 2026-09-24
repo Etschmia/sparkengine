@@ -18,9 +18,10 @@ const MAX_PHASE: i32 = 24;
 // --- tunable parameters ------------------------------------------------------
 // Every weight below was previously a hardcoded constant (hand values, see git
 // history). Grouped in one struct so systematic tuning (Texel/SPSA) can vary
-// them. `STANDARD` holds the v3 Texel tuning (24.09.2026, own 87k self-play
-// positions at 50k nodes, measured +56 Elo vs. the hand values in M1/200);
-// the hand values live on in git history. Material (PIECE_VALUE)
+// them. `STANDARD` holds the Gen4 Texel tuning (24.09.2026, own 232k
+// self-play positions at 200k nodes, measured +51 Elo vs. the v3 tuning in
+// M5/200, cumulatively ~+100 vs. the hand values); older stages live on in
+// git history. Material (PIECE_VALUE)
 // and PHASE_W are deliberately NOT parameters: the search shares PIECE_VALUE
 // (MVV-LVA, delta pruning) and must not change silently with eval tuning.
 #[derive(Clone, Copy)]
@@ -64,41 +65,41 @@ pub struct EvalParams {
 }
 
 pub const STANDARD: EvalParams = EvalParams {
-    pawn_adv_sq_mg: 0,
-    pawn_adv_sq_eg: 2,
-    pawn_center: 3,
-    pawn_base: -31,
-    knight_base_mg: 8,
-    knight_slope_mg: 8,
-    knight_base_eg: -2,
-    knight_slope_eg: 29,
-    bishop_base_mg: 24,
-    bishop_slope_mg: 3,
-    bishop_base_eg: -22,
-    bishop_slope_eg: 8,
-    rook_seventh: 54,
+    pawn_adv_sq_mg: 1,
+    pawn_adv_sq_eg: 1,
+    pawn_center: -1,
+    pawn_base: -15,
+    knight_base_mg: 24,
+    knight_slope_mg: 13,
+    knight_base_eg: 5,
+    knight_slope_eg: 12,
+    bishop_base_mg: 4,
+    bishop_slope_mg: 9,
+    bishop_base_eg: -14,
+    bishop_slope_eg: 4,
+    rook_seventh: 60,
     rook_center_mg: -46,
-    rook_center_eg: -38,
-    queen_base_mg: 54,
+    rook_center_eg: -24,
+    queen_base_mg: 50,
     queen_base_eg: 52,
     king_base_mg: 10,
-    king_slope_mg: 7,
+    king_slope_mg: 21,
     king_base_eg: 12,
-    king_slope_eg: 8,
-    mob: [0, 9, 12, 10, 10, 0],
-    doubled_mg: 20,
-    doubled_eg: 42,
-    isolated_mg: -8,
-    isolated_eg: 6,
-    passed_base_mg: -4,
-    passed_adv_mg: 7,
-    passed_base_eg: -16,
-    passed_adv_eg: 22,
-    bishop_pair_mg: 22,
-    bishop_pair_eg: -19,
-    rook_open: 37,
-    rook_half: 36,
-    shield: 16,
+    king_slope_eg: 7,
+    mob: [0, 5, 11, 10, 10, 0],
+    doubled_mg: 3,
+    doubled_eg: 33,
+    isolated_mg: 14,
+    isolated_eg: 9,
+    passed_base_mg: 1,
+    passed_adv_mg: -2,
+    passed_base_eg: -29,
+    passed_adv_eg: 28,
+    bishop_pair_mg: 32,
+    bishop_pair_eg: 52,
+    rook_open: 55,
+    rook_half: 30,
+    shield: 12,
     tempo: 8,
 };
 
