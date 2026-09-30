@@ -1,20 +1,28 @@
-# Funken-Roadmap: von Blunder-Analyse zu Stärke (Stand 23.09.2026, abends)
+# Funken-Roadmap: von Blunder-Analyse zu Stärke (Stand 30.09.2026, abends)
 
 Dies ist das Wiedereinstiegs-Dokument für eine spätere Sitzung: als Prompt
 einlesen, dann bei **Empfehlung** fortfahren. Details in `EXPERIMENTE.md`
-(Ablauf-Log), Messungen in `MESSERGEBNISSE.md` 9.5–9.8.
+(Ablauf-Log), Messungen in `MESSERGEBNISSE.md` 9.9–9.18.
 
 ## Empfehlung (nächster Schritt)
 
-Stand 24.09. mittags — Ernte (Details `MESSERGEBNISSE.md` 9.9/9.10):
+Stand 30.09. abends — Ernte seit 24.09. (Details `MESSERGEBNISSE.md`
+9.13–9.18):
 
-- **Tuned (params_v3) +56 Elo, LOS 99,8 % (M1, 200 Partien).** Übernahme-
-  Kriterium erfüllt. Vorschlag: `FUNKEN_PARAMS`-Default ins Binary
-  übernehmen (= Tuned als neue Basis) + per Folge-Match absichern; dann
-  Gen4-Modell (params_gen4, −4,0 % Holdout) gegen die neue Basis messen.
-  Entscheidung (Rollout/Bot) bei Tobias — nichts ohne Auftrag übernehmen.
-- Nullzug-Marge (−21 n.s.) und LMR-late (−3 pari): offen, keine Übernahme.
-- Danach erst: QS/SEE-Entscheidung, Zeitmanagement.
+- **Gen5-Tuning verworfen:** 229k Positionen mit Gen4-Engine, Holdout nur
+  −1,3 % (Gen4: −4,0 %), M6 −30 n.s. (offen). Texel-Route vorerst
+  ausgereizt — keine weitere Iteration ohne neues Signal.
+- **QS/SEE-Trilogie vermessen, kein Kandidat:** Diagnose (9.15) belegte
+  QS-Blindheit als Mechanismus (36/45 Widerlegungen ruhig, Statik-Gap nur
+  108 cp, 32/45 nie gefunden bis 5M). Aber: M7 QS-Checks −10 n.s.
+  (kostet einen Ply), M8 SEE +5 pari (kostenlos), M9 Kombi −7 n.s.
+  (alle offen). Kapitel zu — Engine **unverändert Gen4** (`959b13e`).
+- Offene Hebel danach: Zeitmanagement (gezielte Verlängerung bei
+  Eval-Sprüngen; schwächster Hebel — Blunder waren keine Zeitnot),
+  oder Pause bis deutlich mehr Gen4-Partien/neue Muster.
+- **Eigen-Buch v1 (30.09., M10 +70, LOS 100 %, signifikant):**
+  Bot-Übergabe bei Tobias (Binary bauen, `book/funken.book` nach
+  `/opt/funken/`, Config, Neustart). Engine-Messung bleibt buchfrei.
 
 Laufend: nichts (alle Jobs beendet). Kein Langlauf ohne expliziten Auftrag.
 
@@ -41,9 +49,12 @@ Laufend: nichts (alle Jobs beendet). Kein Langlauf ohne expliziten Auftrag.
 
 ## Offene Hebel (nach den Gates)
 
-- QS mit Schachgeboten / SEE (ruhige Ressourcen Qb4/f5!): Feature, 1–2 Wochen
-  inkl. Korrektheitsrisiko. Erst nach LMR-Gate.
-- Tuning mit 200k-Daten (~10 h Maschine) + Label-Filter.
+- QS mit Schachgeboten / SEE: **vermessen 30.09.** (M7 −10 n.s., M8 +5
+  pari, M9 −7 n.s. — alle offen, kein Kandidat). Kapitel zu, siehe 9.15–9.18.
+  Wiederaufnahme nur mit neuer Idee (z. B. tiefere Checks-Stufen), nicht
+  mit denselben Varianten.
+- Tuning: Gen5 verworfen (M6 −30 n.s., Holdout nur −1,3 %) — ausgereizt
+  ohne neues Signal (stärkere Daten, andere Zielfunktion).
 - Zeitmanagement: nur gezielte Verlängerung bei Eval-Sprüngen; Blunder waren
   keine Zeitnot (außer 60+0 Martuni). Schwächster Hebel hier.
 

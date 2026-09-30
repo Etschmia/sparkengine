@@ -525,3 +525,169 @@ Fix in `tools/precheck.sh`).
   LOS 42,4 % → **exakt pari = offen**. Nebenbefund: Tiefe 10 vs. 9
   (späteres LMR kostet den erwarteten Ply, bringt aber nichts). Keine
   Übernahme.
+
+### 9.13 Gen5-Datensatz (29.09.2026, beauftragt, gemessen)
+
+3800 Selbstspiele **Gen4-vs.-Gen4** (aktuelles Binary `959b13e`,
+`/tmp/opencode/funken-base` md5-identisch mit Release), `-n 200000`,
+Zufalls-Eröffnungen (6 Halbzüge, Seeds 20260929/30, 2 Jobs à 1900 auf
+2 Kernen, ~8 h). PGNs `../engine-arena/texel-gen5-200k/{jobA,jobB}/`
+(+ `/merged/` mit Präfix a_/b_ für den Extrakt).
+
+- Extrakt (`tools/texel_data.py`, Filter wie v3/Gen4: ply ≥ 24, kein
+  Schach, nicht nach Schlag/Umwandlung, globaler Dedup, Holdout
+  partieweise): **228991 Positionen (train 205205, holdout 23786)**
+  aus 3800 Partien (Dup 14828, schach/beendet 103339).
+- Spielergebnisse: 1173× 1-0 / 1895× remis / 732× 0-1 (Weiß-Score
+  55,8 % — wie Gen4 56 %; Anzugsvorteil im Selbstspiel bei 200k).
+- TSVs (flüchtig, `/tmp`): `texel5_{train,hold}.tsv`. Reproduzierbar aus
+  den PGNs (dauerhaft in `../engine-arena/`).
+- Verwendung ausstehend (nicht beauftragt): Retune auf Gen5 + Holdout,
+  nur bei Plus weiter zur Ablation (≥200, Precheck).
+
+### 9.14 Retune Gen5 + Match M6 (29.09.2026, beauftragt, gemessen)
+
+Retune auf Gen5 (25 Sweeps, `funken texel-tune`, Log
+`/tmp/opencode/tune_gen5.log`, Params `/tmp/opencode/params_gen5.txt`):
+STANDARD train 0,06927/hold 0,07055 → best (Sweep 23) train **0,06864
+(−0,9 %)** / hold **0,06965 (−1,3 %)**. Holdout-Plus deutlich kleiner als
+Gen4 (−4,0 %); absolutes Niveau tiefer (stärkere Labels vom stärkeren
+Motor). Match-Kriterium (Holdout-Plus) formal erfüllt.
+
+- **M6 Basis (Gen4) vs. Gen5-Modell, 200 Partien** (Wrapper
+  `funken-gen5.sh` auf Gen4-Binary, PGNs `../engine-arena/match-gen5-200k/`,
+  Seed 106, Precheck pre/post OK, 100 Paare/0 identisch): aus Basis-Sicht
+  **108,5 : 91,5 (+61 =95 −44), 54,2 %, Elo +30, CI −5…+65, LOS 95,1 %**
+  → Variante −30, **nicht signifikant = offen** (Gleichstand im Bereich;
+  Tendenz: Gen5 schadet leicht). Keine Übernahme.
+- Einordnung: Zweite Tuning-Iteration mit abnehmendem Ertrag (Holdout
+  −4,0 % → −1,3 %; Match +51 → −30 n.s.). Texel-Retune auf eigenem
+  Selbstspiel scheint ausgereizt — weitere Sweeps/Iterationen versprechen
+  ohne neues Signal (stärkere Daten, andere Zielfunktion) wenig.
+
+### 9.15 QS/SEE-Diagnose an entscheidenden Blundern (29.09.2026, gemessen)
+
+Auftrag: entscheiden, ob QS-mit-Schach/SEE das 1–2-Wochen-Feature wert
+ist (ROADMAP „Offene Hebel"). Datenstand: Blunder-JSON mit 246 Blundern
+(205 ohne Matt, Analyse läuft weiter — 6 Partien mehr als morgens);
+daraus 45 entscheidende (Gewinn→weg / Remis→Verlust, loss < 2000, kein
+Matt). Referenz: lokaler Stockfish 17.1 (identisch mit Analyse-Engine),
+Tiefe 20, 2 Threads. Funken: Gen4-Binary `959b13e`, frische Prozesse.
+Rohdaten (flüchtig, `/tmp/opencode/`): `decisive37.json` (trotz Namens
+45 Positionen), `sf_pv45.json`, `matrix45.json`, `statik45.json`.
+
+- **SF-Bestzüge sind fast immer ruhig:** 36/45 QUIET (8 Schlagzüge,
+  1 Schachgebot); 41/45 PVs bestehen in den ersten 6 Halbzügen zu ≥50 %
+  aus ruhigen Zügen. SF-Bestätigung: 36/45 stimmen mit der Blunder-JSON
+  überein (9 Abweichungen sind gleichwertige Alternativen, Verlust des
+  gespielten Zugs bleibt).
+- **Statik-Audit (Temp-Binary `/tmp/opencode/funken-eval-static`,
+  `src/main.rs` danach revertiert, Release-Binary md5-/bench-identisch):
+  Funken-`evaluate()` (Weiß-Sicht) vs. SF-vorher an der Wurzel:
+  Median-Gap 108 cp, p90 224, max 278 — kein strukturelles Eval-Loch
+  (22.09.: max −645). Die Verluste (150–690 cp) entstehen im
+  Such-Horizont, nicht in der Statik.
+- **Such-Matrix (frisch, `go nodes` 200k/1M/5M):** SF-Bestzug gefunden
+  bei 200k (Spiel-Budget) 7/45, bei 1M +2, bei 5M +4 → **32/45 (71 %)
+  finden die Widerlegung nie bis 5M** (25× Spiel-Budget, Tiefe 12–17).
+- Deutung: Statik annähernd richtig + Widerlegung ruhig + Suche findet
+  sie nicht einmal mit 25× Budget = klassische QS-Blindheit (ruhige
+  Drohungen hinter dem Nominalhorizont unsichtbar, Vollsuche reduziert
+  sie per LMR/Pruning weg). Stärkster bisher gemessener Beleg für den
+  QS/SEE-Hebel; Tuning hat die Statik-Seite geliefert (9.14), dort ist
+  wenig zu holen. Kein Stärke-Versprechen — erst implementieren, dann
+  Ablation (≥200, Precheck).
+
+### 9.16 QS-Stufe-1 + Match M7 (29./30.09.2026, beauftragt, gemessen)
+
+Implementierung: QS sucht ruhige Schachgebote an erster QS-Stufe
+(qply-0, nach Schlagzügen, ohne Stand-Pat/Delta; `quiescence` +qply-Param,
+4 Call-Sites; Ausweichung bei Schach unverändert). Tests 14/14,
+0 Warnungen, Perft 5 = 4865609, Bench 223744/357560/55011 (Basis
+178955/413880/41507 — andere Baumform). Binary
+`/tmp/opencode/funken-qscheck` (flüchtig); `src/search.rs` revertiert,
+Release md5-/bench-verifiziert. Mikro vorab (32 NIE-Fälle, 200k/1M/2M):
+0/0/1 gerettet — Checks sitzen tiefer als qply-0 (11 Check-PV-Fälle 0/11).
+
+- **M7 Basis vs. QS-Checks, 200 Partien** (PGNs
+  `../engine-arena/match-qscheck-200k/`, Seed 107, Precheck pre/post OK,
+  100 Paare/0 identisch): aus Basis-Sicht **103 : 97 (+58 =90 −52),
+  51,5 %, Elo +10, CI −25…+46, LOS 71,6 %** → Variante −10,
+  **nicht signifikant = offen**. Nebenbefund: Tiefe 10 vs. 9 — die Checks
+  kosten bei festen Knoten einen vollen Ply, ohne messbaren Nutzen.
+  Keine Übernahme.
+
+### 9.17 SEE-Stufe-2 + Match M8 (30.09.2026, beauftragt, gemessen)
+
+Implementierung: `Board::see` + `attackers_to` in `src/chess.rs` (eigene
+Lehrbuch-Implementierung, billigste Angreifer zuerst,
+Max/Min-Rückwärtseinsetzung über Bilanz-Präfixe; König nie Angreifer =
+dokumentierte Grenze). QS nutzt SEE (Ordnung absteigend, Skip SEE<0 ohne
+Promo; Ausweichung bei Schach unverändert). 7 neue Unit-Tests
+(handgerechnete Fälle inkl. Stop-Entscheidung und Röntgenstrahl — dabei 2
+echte Implementierungsfehler gefunden+behoben: Promo-Index,
+getauschte-Figur statt Angreifer). Tests 21/21, 0 Warnungen,
+Perft 5 = 4865609, Bench-Scores/PVs identisch (+27/−65/+19). Binary
+`/tmp/opencode/funken-see` (flüchtig); `src/*` revertiert, Release
+md5-/bench-verifiziert. Mikro vorab (45 Fälle, 200k/1M/2M): 7/2/4 = 11/45
+(Basis 7/2/4 auf 5M = 13/45) — 3 Tiefen-Funde durch SEE<0-Skip verloren,
+1 neu (idx19, wie QS-Checks).
+
+- **M8 Basis vs. SEE, 200 Partien** (PGNs
+  `../engine-arena/match-see-200k/`, Seed 108, Precheck pre/post OK,
+  100 Paare/0 identisch): aus Basis-Sicht **98,5 : 101,5 (+46 =105 −49),
+  49,2 %, Elo −5, CI −39…+28, LOS 37,9 %** → Variante +5,
+  **exakt pari = offen**. Nebenbefund:   Tiefe 10 vs. 10 — kein
+  Tiefenpreis (anders als QS-Checks). Keine Übernahme.
+
+### 9.18 Kombination SEE+QS-Checks + Match M9 (30.09.2026, beauftragt, gemessen)
+
+Beide Patches gemeinsam neu angewendet (21/21 Tests, 0 Warnungen,
+Perft 5 = 4865609, Bench 220936/456014/55189, Scores wie QS-Variante).
+Binary `/tmp/opencode/funken-seeqs` (flüchtig); `src/*` revertiert,
+Release md5-/bench-verifiziert. Mikro vorab (45 Fälle, 200k): 8/45
+(Basis 7, SEE 7, QS-Checks 0/32 NIE).
+
+- **M9 Basis vs. SEE+QS-Checks, 200 Partien** (PGNs
+  `../engine-arena/match-seeqs-200k/`, Seed 109, Precheck pre/post OK,
+  100 Paare/0 identisch): aus Basis-Sicht **102 : 98 (+51 =102 −47),
+  51,0 %, Elo +7, CI −27…+41, LOS 65,7 %** → Variante −7,
+  **nicht signifikant = offen**. Nebenbefund: Tiefe 10 vs. 9 (Ply-Preis
+  der Checks bleibt). Keine Übernahme.
+- QS/SEE-Bilanz: Checks −10 n.s. (M7), SEE +5 pari (M8), Kombi −7 n.s.
+  (M9) — dreimal offen, kein Übernahme-Kandidat. Die Diagnose (9.15)
+  bleibt richtig (ruhige Widerlegungen sind das Bild), aber keine der
+  drei QS-Varianten hebt sie bei festen Knoten.
+
+### 9.19 Eigen-Buch v1 + Match M10 (30.09.2026, beauftragt, gemessen)
+
+Motiv: 10/45 entscheidende Blunder in der Eröffnung, eigenwilliges
+Eröffnungsspiel; Tuning- und QS-Routen ausgereizt. Eigene Daten, eigener
+Code: 245 Lichess-Partien (Gen4-Ära) → 78 Frühstellungen (≥6×) →
+Züge aus Funkens eigener Tiefenanalyse (`go nodes 2000000`, 76/78 mit
+2–3 Zügen ≤50 cp dahinter). Kein fremdes Buch, kein Stockfish.
+Neues Modul `src/book.rs` (Format, Hash-Lookup, Legal-Verifikation,
+searchmoves-Filter, xorshift-Auswahl), UCI-Option `BookFile` (Default
+aus — Engine-Messung bleibt buchfrei) + `FUNKEN_BOOK`-Env
+(PARAMS-Präzedenz). Tests 18/18 (4 neu), 0 Warnungen, Bench/Perft
+unverändert. Buchdatei `book/funken.book` (78 Positionen).
+E2E-verifiziert (Treffer, Varianten, Legal-Filter, Default-aus).
+2 Bugs unterwegs behoben (Multi-searchmoves verifiziert ok;
+Knoten-Probe via ehrlicher `info depth 0 nodes 0`-Zeile auf Buchpfad).
+
+- **M10 Buch vs. Basis ab 10 buchlastigen FENs, 200 Partien** (Treiber
+  `/tmp/opencode/match_book.py`, je FEN 20 Partien Farbtausch, PGNs
+  `../engine-arena/match-book-200k/`): Precheck-pre per Design
+  ausgenommen (Bench identisch — Buch ändert keine Suche; Wrapper +
+  Treffer funktional verifiziert), POST 100 Paare/0 identisch OK:
+  aus Basis-Sicht **80 : 120 (+24 =112 −64), 40,0 %, Elo −70,
+  CI −103…−39, LOS 0,0 %** → aus Buch-Sicht **+70, CI +39…+103,
+  LOS 100 % — SIGNIFIKANT**. Stärkster je gemessener Einzelhebel.
+- Nuance (je FEN nur 20 Partien — keine Linien-Aussagen): Gewinn fast
+  komplett aus Schwarz-gegen-1.d4-Familie (z. B. nach 1.d4 18:0);
+  Startpos-Weiß (2:6) und nach-1.e4-Schwarz (1:4) neutral/negativ im
+  Rauschen. Weiß-Repertoire ist v2-Arbeit.
+- Bot-Übergabe (Tobias): Binary bauen, `book/funken.book` nach
+  `/opt/funken/funken.book`, Bridge-Config (`BookFile`, Beispiel
+  ergänzt), Neustart. Engine-Code-Änderung (Buch-Option) steckt im
+  nächsten Commit mit drin — kein separates Rollout nötig.

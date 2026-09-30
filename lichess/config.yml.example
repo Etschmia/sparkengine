@@ -59,6 +59,7 @@ engine:
     Move Overhead: 100     # Engine-interne Zeitreserve in ms.
     Threads: 1             # Funken ist single-threaded (fix).
     Hash: 256              # Transpositionstabelle in MB (Zielrechner: 2 vCPU / ~4 GB RAM).
+    BookFile: /opt/funken/funken.book  # Eigen-Buch v1 (eigene Daten, Bot-only).
 
 abort_time: 30
 move_overhead: 1000        # Zusaetzliche Zeitreserve der Bridge (Netz/Latenz).

@@ -284,6 +284,9 @@ pub fn uci_loop() {
     let mut pos = Position::startpos();
     let mut opts = UciOptions::default();
     let mut tt = TransTable::new_mb(opts.hash_mb);
+    // Eigen-Buch (Bot-only): per BookFile-Option geladen, default aus.
+    let mut book: Option<crate::book::Book> = None;
+    let mut book_rng = crate::book::SimpleRng::seed();
 
     // searching state
     let mut searching = false;
@@ -367,7 +370,25 @@ pub fn uci_loop() {
                 emit("option name Hash type spin default 64 min 1 max 1024".to_string());
                 emit("option name Move Overhead type spin default 100 min 0 max 5000".to_string());
                 emit("option name Threads type spin default 1 min 1 max 1".to_string());
+                emit("option name BookFile type string default <empty>".to_string());
                 emit("uciok".to_string());
+                // Präzedenz FUNKEN_PARAMS: Env lädt beim Start, explizites
+                // setoption gewinnt danach immer.
+                if book.is_none() {
+                    if let Ok(path) = std::env::var("FUNKEN_BOOK") {
+                        if !path.is_empty() {
+                            match crate::book::Book::load(&path) {
+                                Ok((b, skipped)) => {
+                                    emit(format!("info string book loaded {} positions ({} skipped) via FUNKEN_BOOK", b.len(), skipped));
+                                    if !b.is_empty() {
+                                        book = Some(b);
+                                    }
+                                }
+                                Err(e) => emit(format!("info string {e}")),
+                            }
+                        }
+                    }
+                }
             }
             "debug" => {}
             "isready" => {
@@ -428,6 +449,20 @@ pub fn uci_loop() {
                             emit("info string Funken is single-threaded; Threads stays 1".to_string());
                         }
                     }
+                    "bookfile" => {
+                        if value.is_empty() || value == "<empty>" {
+                            book = None;
+                            emit("info string book disabled".to_string());
+                        } else {
+                            match crate::book::Book::load(&value) {
+                                Ok((b, skipped)) => {
+                                    emit(format!("info string book loaded {} positions ({} skipped)", b.len(), skipped));
+                                    book = if b.is_empty() { None } else { Some(b) };
+                                }
+                                Err(e) => emit(format!("info string {e}")),
+                            }
+                        }
+                    }
                     _ => {}
                 }
             }
@@ -476,6 +511,21 @@ pub fn uci_loop() {
                     }
                     if a.len() == 1 {
                         emit(format!("bestmove {}", a[0].to_uci()));
+                        continue;
+                    }
+                }
+                // Eigen-Buch vor der Suche: Treffer -> sofortiger Buchzug
+                // (legal verifiziert, searchmoves beachtet). Sonst Suche.
+                // Die info-Zeile meldet ehrlich nodes 0 (keine Suche); sie
+                // existiert, damit Treiber mit Knoten-Probe (engine_match.py)
+                // Buch-Engines nicht fuer defekt halten.
+                if let Some(ref b) = book {
+                    let mut legal = Vec::new();
+                    pos.board.gen_legal(&mut legal);
+                    if let Some(bm) = b.pick(&pos.board, &legal, allow.as_deref(), &mut book_rng) {
+                        emit(format!("info string book {}", bm.to_uci()));
+                        emit(format!("info depth 0 nodes 0 time 0 pv {}", bm.to_uci()));
+                        emit(format!("bestmove {}", bm.to_uci()));
                         continue;
                     }
                 }

@@ -6,6 +6,7 @@ mod eval;
 mod search;
 mod tune;
 mod uci;
+mod book;
 
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;

@@ -357,6 +357,125 @@ Hand-Patch trägt. Alle Daten selbst erzeugt (keine fremden Labels).
 - 24.09.2026: ROLLOUT (Tobias, a+b): Gen4 als STANDARD (`959b13e`,
   39/39-Check, Bench-Beweis, Tests/Perft grün), Doku 9.12, gepusht.
   Bot-Neustart durch Tobias (pull/build/restart auf Bot-System).
+- 29.09.2026: GEN4-ÄRA-BLUNDERSCHNITT (190 Partien seit 24.09. 12:34:47Z,
+  207 Blunder/173 ohne Matt): Rate 1,09/Spiel (0,91 ohne Matt) vs. 1,51
+  (1,35) im 109-Archiv — ca. −30 %; Schwere flach (Median 207 vs. 210,
+  p90 355 vs. 372); Gegner median 2031→2092, eigene Elo 2013→2062,
+  Score 55,8 % vs. 56,9 % — konsistent mit M1+M5 (~+100). Zeitnot weiter
+  widerlegt (Blunder-Tiefe median 13, Uhr median 60 s, nur 9/207 <15 s).
+  Wahnmaß median 277 vs. 283 (flach, gleiche Methode). 37 entscheidende
+  Blunder (Gewinn→weg/Remis→Verlust), davon 22 ohne Motiv-Tag (diffuser
+  Positionsdrift 200–400 cp), 10 in der Eröffnung. Frisch-Probe (10 FENs,
+  Tiefe 12): 7/10 spielt Funken anders als im Spiel — kein einzelnes
+  systematisches Loch, QS/SEE-Hebel damit nicht belegt. Details im Chat,
+  keine Messung committed.
+- 29.09.2026: GEN5 BEAUFTRAGT (Tobias, Wahl „Gen5-Tuning starten"):
+  3800 Selbstspiele Gen4-vs-Gen4 (`/tmp/opencode/funken-base` = md5-identisch
+  mit Release `959b13e`), `-n 200000`, Zufalls-Eröffnungen (6 Halbzüge,
+  Seeds 20260929/30, 2 Jobs à 1900 auf 2 Kernen, ETA ~8–10 h wie Gen4).
+  Dirs `~/engine-arena/texel-gen5-200k/{jobA,jobB}/`,
+  Logs `/tmp/opencode/texel_gen5_{A,B}.log` (PIDs 2371584/2371585, Start
+  29.09. ~11:45 UTC, beide verifiziert produzierend: je 2 PGNs nach 90 s,
+  SearchLimit 200000, plausible Verläufe). KEIN QS/SEE, KEIN Rollout.
+  Nach Abschluss: PGNs mit Präfix a_/b_ mergen, EIN texel_data.py-Lauf
+  (globaler Dedup + Holdout), zählen, MESSERGEBNISSE. Retune danach ist
+  NICHT beauftragt (Folgeentscheidung).
+- 29.09.2026, ~19:35 UTC: GEN5 FERTIG: beide Jobs 1900/1900 (Prozesse
+  beendet, Logs je 1900/1900). Extrakt aus `/merged/` (a_/b_-Präfix, ein
+  Lauf): 3800 Partien → **228991 Positionen (train 205205, hold 23786)**,
+  Ziel ≥200k erreicht (Gen4: 231660). Plausibel: Dup 14828, schach/beendet
+  103339; Spielergebnisse 1173/1895/732 (Weiß-Score 55,8 % — wie Gen4 56 %).
+  TSVs (flüchtig, `/tmp`): `texel5_{train,hold}.tsv`. Reproduzierbar aus
+  den PGNs (dauerhaft in `../engine-arena/texel-gen5-200k/`).
+  Details `MESSERGEBNISSE.md` 9.13. Retune NICHT beauftragt.
+- 29.09.2026: RETUNE GEN5 (Tobias, „Retune starten"): 25 Sweeps auf 229k
+  (Log `/tmp/opencode/tune_gen5.log`, Params `/tmp/opencode/params_gen5.txt`):
+  STANDARD 0,06927/0,07055 → best (Sweep 23) 0,06864/0,06965 (Hold −1,3 %).
+  M6 Gen4-Basis vs. Gen5-Wrapper (200 Partien, Seed 106, Precheck pre/post
+  OK, 100 Paare/0 identisch): aus Basis-Sicht 108,5:91,5 (+61 =95 −44),
+  54,2 %, Elo +30, CI −5…+65, LOS 95,1 % → −30 n.s. = offen, KEINE
+  Übernahme. Details `MESSERGEBNISSE.md` 9.14. Befund: Tuning-Ertrag
+  nimmt ab (Holdout −4,0 % → −1,3 %, Match +51 → −30 n.s.) — Texel-Route
+  vorerst ausgereizt. Laufend: nichts.
+- 29.09.2026: QS/SEE-DIAGNOSE (Tobias): 45 entscheidende Blunder (246er
+  JSON, 205 ohne Matt), SF 17.1 lokal d20, Funken frisch 200k/1M/5M.
+  Befund: 36/45 SF-Bestzüge ruhig, 41/45 PVs ≥50 % ruhig; Statik-Gap
+  median 108/max 278 (kein Eval-Loch); Suche findet 32/45 Widerlegungen
+  nie bis 5M. Stärkster Beleg für QS/SEE-Hebel. Details
+  `MESSERGEBNISSE.md` 9.15. Werkzeuge flüchtig (`/tmp/opencode/`
+  sf_pv45/matrix45/statik45/funken-eval-static);   `src/main.rs` revertiert,
+  Release-Binary md5-/bench-verifiziert. Implementierung NICHT
+  beauftragt (Folgeentscheidung).
+- 29./30.09.2026: QS-STUFE-1 (Tobias, „Implementieren"): QS sucht ruhige
+  Schachgebote an erster QS-Stufe (qply-0, nach Schlagzuegen, ohne
+  Stand-Pat/Delta; `quiescence` +qply-Param, 4 Call-Sites; Schach-Ausweichung
+  unveraendert). Tests 14/14, 0 Warnungen, Perft 5 = 4865609, Bench
+  223744/357560/55011 (Basis 178955/413880/41507 — andere Baumform).
+  Binary `/tmp/opencode/funken-qscheck`, `src/search.rs` revertiert,
+  Release md5-/bench-verifiziert. Mikro (32 NIE-Faelle, 200k/1M/2M):
+  0/0/1 gerettet (nur idx19@2M); selbst 11 Check-PV-Faelle 0/11 — Checks
+  sitzen tiefer als qply-0. Ehrlich enttaeuschend, aber Mikro ≠ Kriterium.
+  M7 laeuft: qscheck vs. Gen4-Basis, 200 Partien, Seed 107, Precheck pre OK
+  (PID 3177090, Log `/tmp/opencode/match_qscheck.log`).
+- 30.09.2026: M7 **103:97 (+58 =90 −52), 51,5 %, Elo +10, CI −25…+46,
+  LOS 71,6 %** (100 Paare/0 identisch, POST OK) → −10 n.s. = offen, KEINE
+  Uebernahme. Nebenbefund Tiefe 10 vs. 9 (Checks kosten einen Ply ohne
+  Nutzen). Details `MESSERGEBNISSE.md` 9.16.
+- 30.09.2026: M9-KOMBINATION (Tobias): SEE- + QS-Checks-Patch gemeinsam
+  neu angewendet (21/21 Tests, 0 Warnungen, Perft 5 = 4865609, Bench
+  220936/456014/55189, Scores wie QS-Variante). Binary
+  `/tmp/opencode/funken-seeqs`, `src/*` revertiert, Release
+  md5-/bench-verifiziert. Mikro 200k: 8/45 (Basis 7, SEE 7).
+  M9 laeuft: seeqs vs. Gen4-Basis, 200 Partien, Seed 109, Precheck pre OK
+  (PID 3324200, Log `/tmp/opencode/match_seeqs.log`).
+- 30.09.2026: M9 **102:98 (+51 =102 −47), 51,0 %, Elo +7, CI −27…+41,
+  LOS 65,7 %** (100 Paare/0 identisch, POST OK) → −7 n.s. = offen, KEINE
+  Uebernahme. Nebenbefund Tiefe 10 vs. 9. Details `MESSERGEBNISSE.md`
+  9.18.   QS/SEE-Trilogie: M7 −10, M8 +5, M9 −7 (alle n.s./offen) — kein
+  Kandidat. Laufend: nichts.
+- 30.09.2026: QS/SEE-KAPITEL GESCHLOSSEN (Tobias, nach M9). ROADMAP auf
+  Stand 30.09. gebracht (Empfehlung + Offene Hebel). Engine unveraendert
+  Gen4 (`959b13e`), Baum sauber (nur Doku diff). Bot spielt weiter Gen4.
+  Naechste Optionen: Zeitmanagement (schwaechster Hebel) oder Pause bis
+  mehr Partien/neue Muster. Laufend: nichts.
+- 30.09.2026: M10 **aus Buch-Sicht +70 (CI +39…+103, LOS 100 %,
+  SIGNIFIKANT)** — 80:120 aus Basis-Sicht (+24 =112 −64), POST 100/0 OK.
+  Details `MESSERGEBNISSE.md` 9.19. Bot-Uebergabe bei Tobias (Binary,
+  Buchdatei, Config, Neustart). Laufend: nichts.
+- 30.09.2026: EIGEN-BUCH v1 (Tobias, „baue dein Buch"): 245 Lichess-Partien
+  -> 78 Fruehstellungen (>=6x); Zuege aus Funkens eigener Tiefenanalyse
+  (2M Knoten, 76/78 mit 2–3 Zuegen <=50cp). Neues Modul `src/book.rs`
+  (Format, Hash-Lookup, Legal-Verifikation, searchmoves-Filter, xorshift),
+  UCI-Option `BookFile` (default aus) + `FUNKEN_BOOK`-Env (PARAMS-Praezedenz).
+  Tests 18/18 (4 neu), 0 Warnungen, Bench/Perft unveraendert (Default aus).
+  2 Bugs unterwegs behoben (Multi-searchmoves verifiziert ok; Knoten-Probe
+  via ehrlicher `info depth 0 nodes 0`-Zeile auf Buchpfad).
+  M10 laeuft: Buch vs. Basis ab 10 buchlastigen FENs, 200 Partien
+  (Treiber `/tmp/opencode/match_book.py`, PID 3463522). Precheck-pre per
+  Design ausgenommen (Bench identisch — Buch aendert keine Suche;
+  Wrapper-Divergenz + Buch-Treffer funktional verifiziert); POST bleibt.
+- 30.09.2026: SEE-STUFE-2 (Tobias): `Board::see` + `attackers_to` in
+  `src/chess.rs` (eigene Lehrbuch-Implementierung, billigste Angreifer
+  zuerst, Max/Min-Rueckwaertseinsetzung; Koenig nie Angreifer =
+  dokumentierte Grenze). 7 neue Unit-Tests (handgerechnete Faelle inkl.
+  Stop-Entscheidung + Roentgenstrahl); dabei 2 echte Implementierungsfehler
+  gefunden+behoben (Promo-Index, getauschte-Figur statt Angreifer).
+  QS nutzt SEE (Ordnung absteigend, Skip SEE<0 ohne Promo; Ausweichung
+  unveraendert). Tests 21/21, 0 Warnungen, Perft 5 = 4865609, Bench-Scores
+  identisch (+27/−65/+19). Binary `/tmp/opencode/funken-see`,
+  `src/chess.rs`+`src/search.rs` revertiert, Release md5-/bench-verifiziert.
+  Mikro (45 Faelle, 200k/1M/2M) laeuft (PID 3261674, Log
+  `/tmp/opencode/micro_see.log`). Laufend: Mikro + M8-Auswertung danach.
+- 30.09.2026: SEE-MIKRO: 7/2/4 = 11/45 (Basis 7/2/4 auf 5M = 13/45):
+  10/13 Basis-Funde gehalten, 3 Tiefen-Funde (5M) durch SEE<0-Skip verloren,
+  1 neu (idx19@2M, wie QS-Checks). Warnsignal, aber Mikro ≠ Kriterium.
+  M8 laeuft: see vs. Gen4-Basis, 200 Partien, Seed 108, Precheck pre OK
+  (PID 3264343, Log `/tmp/opencode/match_see.log`).
+- 30.09.2026: M8 **98,5:101,5 (+46 =105 −49), 49,2 %, Elo −5, CI −39…+28,
+  LOS 37,9 %** (100 Paare/0 identisch, POST OK) → +5 pari = offen, KEINE
+  Uebernahme. Nebenbefund Tiefe 10 vs. 10 (kein Tiefenpreis). Details
+  `MESSERGEBNISSE.md` 9.17. QS/SEE-Bilanz: Checks −10 n.s. (Ply-Kosten),
+  SEE +5 pari (kostenlos) — beide offen, keine Uebernahme. Laufend: nichts.
 - 24.09.2026: BLUNDER-SCHNITT (Bot läuft mit Gen4): Quellschnitt auf
   SYR-PE-BUTDEV per Upload-Filter `SPARK_ANALYSE_SINCE=2026-09-24T12:34:47Z`
   (echter Neustart; game_records unangetastet, Timer gestoppt; Stand dort:

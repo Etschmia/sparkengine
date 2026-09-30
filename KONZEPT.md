@@ -103,8 +103,9 @@ behandelt (`go ponder` = Suche bis `stop`).
 
 - Spielstärke gemessen ≈ Stockfish-17-Limiter Stufe 1900 bei 300 ms/Zug
   (4 Partien, Kleinstsample — keine Elo-Behauptung, Details in MESSERGEBNISSE.md).
-- Eröffnungsspiel eigenwillig (derzeit ohne Buch; Figuren zuerst).
-  Eigene Mini-Eröffnungsauswahl wäre möglich, fehlt noch.
+- Eröffnungsspiel: Die Engine selbst spielt ohne Buch (Messung bleibt
+  buchfrei); der Bot nutzt das Eigen-Buch v1 (eigene Daten, Bot-only,
+  Details `MESSERGEBNISSE.md` 9.19).
 - Kein SMP, kein Ponder, keine Endspieldatenbanken eingebunden, keine Aufgabe/Remisangebote
   (Bridge-Beispiel mit Fremdquellen derzeit aus; Zugentscheidung aus eigener
   Suche; Matt/Remis adjudiziert Lichess).
