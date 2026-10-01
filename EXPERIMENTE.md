@@ -476,6 +476,13 @@ Hand-Patch trägt. Alle Daten selbst erzeugt (keine fremden Labels).
   Uebernahme. Nebenbefund Tiefe 10 vs. 10 (kein Tiefenpreis). Details
   `MESSERGEBNISSE.md` 9.17. QS/SEE-Bilanz: Checks −10 n.s. (Ply-Kosten),
   SEE +5 pari (kostenlos) — beide offen, keine Uebernahme. Laufend: nichts.
+- 01.10.2026: BLUNDER-SCHNITT (Bot läuft mit Eigen-Buch v1): Stichtag auf
+  SYR-PE-BUTDEV `SPARK_ANALYSE_SINCE=2026-10-01T15:56:11Z` (dort gesetzt).
+  Hier `~/voigtsbach_analysen/`: 279 Alt-PGNs (Gen4-Reihe, Stichtag 24.09.)
+  + LIESMICH.md nach `archiv-vor-buch-v1-20261001/`; JSONs waren vom ersten
+  Lauf nach Schnitt schon ersetzt (Alt-Kennzahlen: 279/279, 316 Blunder).
+  Neu-PGNs nach Header-Zeit ≥ Stichtag behalten (4, inkl. 9Yvsl9v5).
+  `voigtsbach` zeigt nur noch neue Partien.
 - 24.09.2026: BLUNDER-SCHNITT (Bot läuft mit Gen4): Quellschnitt auf
   SYR-PE-BUTDEV per Upload-Filter `SPARK_ANALYSE_SINCE=2026-09-24T12:34:47Z`
   (echter Neustart; game_records unangetastet, Timer gestoppt; Stand dort:
