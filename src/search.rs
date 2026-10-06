@@ -5,7 +5,7 @@
 // aspiration windows, mate-distance pruning, null-move pruning, late-move
 // reductions, check extensions, futility pruning, delta pruning in
 // quiescence, MVV-LVA + killer + history ordering, repetition / fifty-move /
-// insufficient-material draws. Mate scores are stored ply-normalised.
+// insufficient-material / wrong-bishop draws. Mate scores are stored ply-normalised.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -306,7 +306,7 @@ impl Searcher {
         if self.should_abort() {
             return 0;
         }
-        if self.board.half >= 100 || self.board.insufficient_material() || self.is_repetition() {
+        if self.board.half >= 100 || self.board.insufficient_material() || self.board.wrong_bishop_draw() || self.is_repetition() {
             return 0;
         }
         let in_check = self.board.in_check(self.board.side);
@@ -423,7 +423,7 @@ impl Searcher {
                 return alpha;
             }
         }
-        if self.board.half >= 100 || self.board.insufficient_material() {
+        if self.board.half >= 100 || self.board.insufficient_material() || self.board.wrong_bishop_draw() {
             self.pv_len[ply] = ply;
             return 0;
         }
@@ -879,6 +879,21 @@ mod tests {
             3,
         );
         assert_eq!(info.score, 0);
+    }
+
+    #[test]
+    fn wrong_bishop_scores_zero() {
+        // K+L+h-Bauer (falscher Laeufer) vs K, Ecke gehalten: kein
+        // +6-Materialismus mehr (Partie 2wzlFoDU, 06.10.2026), sondern 0.
+        // Weiss am Zug hat nur Koenigs-/Laeuferzuege; die Stellung bleibt
+        // in der Festung.
+        let info = search_depth("7k/7P/4K3/8/4B3/8/8/8 w - - 0 1", 6);
+        assert_eq!(info.score, 0, "score = {}", info.score);
+        assert!(!info.best.is_null());
+        // Richtiger Laeufer bleibt gewinnbar -> klar positiv. (Kg6 deckt
+        // h7: mit Ke6 hinge der Bauer, Kg7xh7 -> K+L-K-remis, Engine recht.)
+        let info2 = search_depth("7k/7P/6K1/8/5B2/8/8/8 w - - 0 1", 6);
+        assert!(info2.score > 200, "score = {}", info2.score);
     }
 
     /// Play UCI moves on a fresh startpos board, returning the final board

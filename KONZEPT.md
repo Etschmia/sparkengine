@@ -49,14 +49,18 @@ Code übernommen**):
 - Zugordnung: TT-Zug → MVV-LVA → Killer (2/Ply) → History
 - Nullzug-Pruning (R = 2–3), Late-Move-Reduktionen, Schach-Verlängerung,
   Futility-/Reverse-Futility-Pruning, Mattdistanz-Pruning
-- Remis: 50-Züge, unzureichendes Material, Stellungswiederholung über Hash-Historie
+- Remis: 50-Züge, unzureichendes Material, falscher Läufer + Randbauer
+  gegen blanken König bei gehaltener Ecke (theoretisch remis, eigene
+  Festungserkennung — kein Sonderwissen aus Fremdquellen), Stellungswiederholung
+  über Hash-Historie
   (exaktes Dreifach-Remis: der Wiederholungs-Stack enthält die aktuelle Stellung,
   Cutoff erst beim 3. Auftreten — einheitlich für Partiehistorie und Suchbaum;
   bei Stellungswiederholung sucht die Wurzel immer vollständig über alle legalen
   Züge und liefert einen begründeten Zug, auch wenn die Stellung bereits zweimal
   vorkam; kein TT-Cutoff an der Wurzel, dort dient die TT nur der Zugordnung.
-  Unveränderte Restgrenze: Für 50-Züge-Regel und unzureichendes Material kehrt
-  auch die Wurzel weiterhin sofort mit Score 0 zurück.)
+   Unveränderte Restgrenze: Für 50-Züge-Regel, unzureichendes Material und
+   gehaltene Falscher-Läufer-Festung kehrt auch die Wurzel weiterhin sofort
+   mit Score 0 zurück.)
 
 Eigene Anteile: die konkrete Kombination, die Zeitformel sowie die
 Bewertungsfunktion (unten). Die Schwellwerte (Fensterbreiten,

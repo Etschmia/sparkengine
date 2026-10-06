@@ -57,6 +57,11 @@ Laufend: nichts (alle Jobs beendet). Kein Langlauf ohne expliziten Auftrag.
   ohne neues Signal (stärkere Daten, andere Zielfunktion).
 - Zeitmanagement: nur gezielte Verlängerung bei Eval-Sprüngen; Blunder waren
   keine Zeitnot (außer 60+0 Martuni). Schwächster Hebel hier.
+- Remis-Vorausschau (06.10., MESSERGEBNISSE 9.20/§6): 50-Züge nur als
+  eingetreten gewertet (keine Annäherungs-Dämpfung), kein Remis-Angebot/Claim
+  (UCI/Bridge aus) — plus Nebenbefund K+L+S-Konvertierung bei kleinen Knoten
+  (h1=N korrekt, danach nicht konvertiert). Je Feature eigene Entscheidung
+  mit Messung.
 
 ## Mess-Regeln (nicht verhandelbar)
 

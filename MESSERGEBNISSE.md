@@ -23,13 +23,17 @@ Befehl: `./target/release/funken perft <tiefe> [fen]`.
 
 Perft-Leistung: ca. 5–14 Mio. Knoten/s (VM-lastabhängig).
 
-## 2. Unit-Tests: `cargo test` — 14/14 ✅ (ausgeführt)
+## 2. Unit-Tests: `cargo test` — 20/20 ✅ (ausgeführt)
 
 Schachkern: FEN-Roundtrip, Hash-Stabilität unter make/unmake (inkrementell ==
 rekomputiert), Startpos-Perft 1–3, **En-passant-Fesselung** (illegaler EP-Schlag
 fehlt, legale Königs-/Bauernzüge vorhanden), **Rochade durch Schach**
 (kurz illegal/lang legal), Matt & Patt, unzureichendes Material (K–K, K+L–K,
-K+S–K, gleichfarbige Läufer remis / ungleichfarbig spielbar), 8× Umwandlung.
+K+S–K, gleichfarbige Läufer remis / ungleichfarbig spielbar), 8× Umwandlung,
+**falscher Läufer + Randbauer** (h-Bauer/weiß und a-Bauer/weiß je remis bei
+gehaltener Ecke, richtiger Läufer spielbar, Verteidiger fern der Ecke kein
+Sofort-Remis, schwarzer Angreifer gespiegelt, Extramaterial/Springer/
+ungleichfarbiger Läufer kein Fall).
 Suche: Matt-in-1 (`e1e8`, Matt-Score ab Tiefe 1), Patt = 0, 50-Züge = 0,
 **2. Stellungswiederholung sucht weiter** (Italienisch mit Vorgeschichte:
 gleicher Zug/selber Score wie ohne Vorgeschichte, Tiefe 3),
@@ -38,8 +42,10 @@ gleicher Zug/selber Score wie ohne Vorgeschichte, Tiefe 3),
 der Score klar negativ; die Vorgeschichte ist dabei synthetisch injiziert —
 zweimal derselbe Hash, keine legal vollständig ausgespielte
 Wiederholungssequenz; getestet wird die Zählschwelle, nicht der
-Partieverlauf), **wiederverwendete TT sucht die Wurzel neu**
-(Tiefe 4 nach Tiefe 4 mit derselben TT: volle Knotenzahl, PV konsistent).
+  Partieverlauf), **wiederverwendete TT sucht die Wurzel neu**
+  (Tiefe 4 nach Tiefe 4 mit derselben TT: volle Knotenzahl, PV konsistent),
+**falscher Läufer = 0** (Partie-Nähe K+L+h-Bauer vs K: Score 0 statt +6;
+richtiger Läufer bei gedecktem Bauern weiter klar positiv, Tiefe 6).
 
 ## 3. UCI + Zeitmanagement (ausgeführt, Treiber `tests_ucitool.py`)
 
@@ -154,6 +160,15 @@ beweist weder Spielstärke noch Schadensfreiheit des Fix.
   Zurückgestellt weil: Syzygy-Sondierung ohne Referenz-Code als Vorlage ein
   Mehrwochen-Risiko wäre, ein Fremdbuch die Eröffnungsmessung dominieren würde
   und die Engine gerade demonstrieren soll, was eigene Suche/Bewertung leisten.
+- Wrong-Bishop-Stärke-Match (≥200): bewusst nicht angesetzt — Precheck-pre
+  bricht per Design ab (Bench identisch, 9.20); ein Selbstspiel aus
+  Zufallsopenings mäße per Konstruktion pari. Verifikation per
+  Regressionstests + Partie-Repro (9.20), kein Stärke-Plus behauptet.
+- 50-Züge-Vorausschau: nur `half >= 100` als eingetreten gewertet (9.20);
+  Annäherungs-Dämpfung und Remis-Angebot/Claim bleiben deaktiviert
+  (UCI kennt keins, Bridge-`offer_draw_enabled: false`).
+- K+L+S-Konvertierung bei kleinen Knoten (Nebenbefund 9.20: nach korrektem
+  `h1=N` bei 50k nicht konvertiert) — als eigenes Experiment mit Messung.
 
 ## 7. Lichess-Anbindung: Validierungsstand (ausgeführt, ohne Token)
 
@@ -691,3 +706,48 @@ Knoten-Probe via ehrlicher `info depth 0 nodes 0`-Zeile auf Buchpfad).
   `/opt/funken/funken.book`, Bridge-Config (`BookFile`, Beispiel
   ergänzt), Neustart. Engine-Code-Änderung (Buch-Option) steckt im
   nächsten Commit mit drin — kein separates Rollout nötig.
+
+### 9.20 Falscher-Läufer-Festung + Remis-Angebotsfrage (06.10.2026, gemessen)
+
+Anlass: Lichess-Partie `2wzlFoDU` (Funken als „Etschmia" vs. Martuni,
+1/2–1/2): ab Zug ~56 nur noch K+L+h-Bauer vs K, Läufer hellfarbeitet,
+Umwandlung h8 dunkel — theoretisch remis bei gehaltener Ecke. Funken
+meldete bis zum Server-Abbruch +6,3 und spielte weiter. Repro lokal:
+Baseline-Binary auf `7k/7P/8/4K3/4B3/8/8/8 b - - 90 111` meldet
+`cp -672` (Schwarzsicht, Tiefe 10–15).
+
+Implementierung (eigener Code, Lehrbuchverfahren): `Board::wrong_bishop_draw`
+(`src/chess.rs`) — exakt K+L+Randbauer (a-/h-Linie) vs K, Läuferfarbe ≠
+Umwandlungsfeld (a8 hell / h8 dunkel / a1 dunkel / h1 hell), Wache: Gegnerkönig
+≤ 2 Felder vom Umwandlungsfeld (sonst spielt die Suche weiter, damit Taktik
+wie sofortige Umwandlung sichtbar bleibt). Gewertet wie
+`insufficient_material` in Quieszenz + Negamax, inkl. Wurzel-Sofort-0
+(KONZEPT §3-Restgrenze ergänzt). Unterwegs 2 Befunde behoben, beide
+verifiziert: Umwandlungsfeld war zunächst immer Rang 8 (falsch für schwarze
+Bauern); Test-FEN mit Ke6/hängendem h7 ist wirklich remis (Kg7xh7 —
+die Engine hatte recht, Test auf Kg6/gedeckter Bauer korrigiert).
+
+Verifikation (ausgeführt): `cargo test` 20/20 (2 neue Tests), Release-Build
+0 Warnungen/Fehler, Perft 5 = 4865609, Bench bit-identisch zur Basis
+(178955/413880/41507, gleiche Scores/PVs — Baum außerhalb der Zielfestung
+unverändert). Partie-Stellung meldet jetzt `cp 0` (Wurzel-Sofort-0).
+Funktional (Schiedsrichter python-chess, `-n 50000`, PGNs flüchtig `/tmp/wb/`):
+neu/neu aus der Partie-Nähe `... b - - 0 1` → remis nach 4 Halbzügen
+(Patt, alle Evals +0.00); Basis/Basis aus derselben Stellung → remis erst
+nach 100 Halbzügen (Wiederholung), Evals durchgehend ±6,4–6,7 — das
+Lichess-Bild exakt reproduziert. Neu/neu schwarzer Angreifer
+(`Ke4/Ld6/Ph2 vs Kf1`) → korrekte Unterverwandlung `1…h1=N` (+0.00),
+danach K+L+S vs K bei 50k nicht konvertiert → Wiederholungsremis
+(Nebenbefund Konvertierungsschwäche, kein Regressions-Test, offen).
+
+Kein Stärke-Match (≥200): Precheck-pre bricht per Design ab (Bench
+identisch — wie M10/Buch: die Änderung greift nur in einer Endspielklasse,
+die aus ausgeglichenen Zufallsopenings praktisch nie entsteht; ein
+200-Partien-Selbstspiel mäße per Konstruktion pari). Status: **Bugfix mit
+Test-/Partie-Beleg, kein Stärke-Plus behauptet.**
+
+Offen (Abschnitt 6): 50-Züge-Vorausschau (nur `half >= 100` als eingetreten
+gewertet, keine Annäherungs-Dämpfung), Remis-Angebot/Claim (UCI sendet
+keins, Bridge-`offer_draw_enabled: false` bleibt — Partien enden durch Matt
+oder Server-Adjudikation; hätte hier ohnehin nicht gegriffen, da der Score
+falsch positiv war).

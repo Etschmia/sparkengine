@@ -896,6 +896,68 @@ impl Board {
         false
     }
 
+    /// Wrong-colored bishop + rook pawn vs bare king: theoretical draw once
+    /// the defender holds the promotion corner (own textbook implementation).
+    ///
+    /// Conditions: exactly K+B+RP (a- or h-file) vs K, bishop unable to
+    /// attack the promotion square (a8 is light, h8 is dark with
+    /// color = (file + rank) & 1, a1 dark = 0). Guard: the defending king
+    /// must already stand within 2 squares of the promotion square —
+    /// otherwise (e.g. pawn on 7th vs far king) tactics may still win and
+    /// the search plays on until the fortress is actually established.
+    pub fn wrong_bishop_draw(&self) -> bool {
+        let mut bishop_sq = NO_SQ;
+        let mut bishop_color = 0u8;
+        let mut bishops = 0u32;
+        let mut pawn_sq = NO_SQ;
+        let mut pawn_color = 0u8;
+        let mut pawns = 0u32;
+        for s in 0..64 {
+            let p = self.sq[s];
+            if p == EMPTY || type_of(p) == 5 {
+                continue;
+            }
+            match type_of(p) {
+                0 => {
+                    pawns += 1;
+                    pawn_sq = s as u8;
+                    pawn_color = color_of(p);
+                }
+                2 => {
+                    bishops += 1;
+                    bishop_sq = s as u8;
+                    bishop_color = color_of(p);
+                }
+                _ => return false, // rook, knight or queen: not this endgame
+            }
+        }
+        if bishops != 1 || pawns != 1 || bishop_color != pawn_color {
+            return false;
+        }
+        let pf = file_of(pawn_sq);
+        if pf != 0 && pf != 7 {
+            return false;
+        }
+        // Promotion square and its color: a8 light / h8 dark for White,
+        // a1 dark / h1 light for Black ((file + rank) & 1, a1 dark = 0).
+        let promo: u8 = match (pf, pawn_color) {
+            (0, WHITE) => 56, // a8
+            (0, _) => 0,      // a1
+            (_, WHITE) => 63, // h8
+            _ => 7,           // h1
+        };
+        let promo_color = ((promo >> 3) + (promo & 7)) & 1;
+        let b_color = ((bishop_sq >> 3) + (bishop_sq & 7)) & 1;
+        if b_color == promo_color {
+            return false; // right bishop: promotion can be forced
+        }
+        // Defender (bare king) holds the corner?
+        let dk = self.king[opp(pawn_color) as usize];
+        let df = (file_of(dk) - file_of(promo)).abs();
+        let dr = (rank_of(dk) - rank_of(promo)).abs();
+        df <= 2 && dr <= 2
+    }
+
     // --- perft ----------------------------------------------------------------
     pub fn perft(&mut self, depth: u32) -> u64 {
         if depth == 0 {
@@ -1016,6 +1078,32 @@ mod tests {
         // Bishops on opposite colors (f2 dark, h1 light) -> mate possible.
         assert!(!Board::from_fen("5k2/8/8/8/8/8/5B2/5K1B w - - 0 1").unwrap().insufficient_material());
         assert!(!Board::startpos().insufficient_material());
+    }
+
+    #[test]
+    fn wrong_bishop_cases() {
+        // Farbe = (Linie + Reihe) & 1, a1 dunkel = 0.
+        // h-Bauer: Umwandlung h8 dunkel -> falscher Laeufer = hell.
+        // Partie-Fall (Etschmia-Lichess, 06.10.2026): K+L+h-Bauer vs K,
+        // Laeufer hell (e4), Schwarz haelt die Ecke (h8).
+        assert!(Board::from_fen("7k/7P/4K3/8/4B3/8/8/8 w - - 0 1").unwrap().wrong_bishop_draw());
+        // Richtiger (dunkler) Laeufer f4 -> gewinnbar.
+        assert!(!Board::from_fen("7k/7P/4K3/8/5B2/8/8/8 w - - 0 1").unwrap().wrong_bishop_draw());
+        // a-Bauer: Umwandlung a8 hell -> falscher Laeufer = dunkel (d6).
+        assert!(Board::from_fen("k7/P7/2KB4/8/8/8/8/8 w - - 0 1").unwrap().wrong_bishop_draw());
+        // Verteidiger fern der Ecke (Ke8, Abstand 3 zu h8) -> kein
+        // Sofort-Remis, damit Taktik (z. B. h7-h8) sichtbar bleibt.
+        assert!(!Board::from_fen("4k3/8/8/8/4B3/8/7P/3K4 w - - 0 1").unwrap().wrong_bishop_draw());
+        // Schwarzer Angreifer gespiegelt: Umwandlung h1 hell, falscher
+        // Laeufer = dunkel (d4), Weiss haelt die Ecke (Kg1).
+        assert!(Board::from_fen("8/8/8/8/3b4/8/7p/6K1 b - - 0 1").unwrap().wrong_bishop_draw());
+        // Extramaterial (Turm) -> kein Fall dafuer.
+        assert!(!Board::from_fen("7k/7P/4K3/8/4B3/8/8/R7 w - - 0 1").unwrap().wrong_bishop_draw());
+        // Springer statt Laeufer -> kein Fall dafuer.
+        assert!(!Board::from_fen("7k/7P/4K3/8/4N3/8/8/8 w - - 0 1").unwrap().wrong_bishop_draw());
+        // Laeufer und Bauer verschiedener Farbe -> kein Fall dafuer.
+        assert!(!Board::from_fen("7k/7P/4K3/8/4b3/8/8/8 w - - 0 1").unwrap().wrong_bishop_draw());
+        assert!(!Board::startpos().wrong_bishop_draw());
     }
 
     #[test]
