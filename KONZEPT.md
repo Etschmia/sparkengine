@@ -50,8 +50,10 @@ Code übernommen**):
 - Nullzug-Pruning (R = 2–3), Late-Move-Reduktionen, Schach-Verlängerung,
   Futility-/Reverse-Futility-Pruning, Mattdistanz-Pruning
 - Remis: 50-Züge, unzureichendes Material, falscher Läufer + Randbauer
-  gegen blanken König bei gehaltener Ecke (theoretisch remis, eigene
-  Festungserkennung — kein Sonderwissen aus Fremdquellen), Stellungswiederholung
+  gegen blanken König bei **besetzter Umwandlungsecke und Bauer auf
+  vorletzter Reihe** (theoretisch remis, eigene
+  Festungserkennung — kein Sonderwissen aus Fremdquellen; leere Ecke spielt
+  die Suche weiter, da nach Umwandlung K+L+S-Matt existiert), Stellungswiederholung
   über Hash-Historie
   (exaktes Dreifach-Remis: der Wiederholungs-Stack enthält die aktuelle Stellung,
   Cutoff erst beim 3. Auftreten — einheitlich für Partiehistorie und Suchbaum;

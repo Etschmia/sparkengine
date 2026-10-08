@@ -938,6 +938,15 @@ impl Board {
         if pf != 0 && pf != 7 {
             return false;
         }
+        // Festung erst, wenn der Bauer unmittelbar vor der Umwandlung steht
+        // (vorletzte Reihe: Rang 7 fuer Weiss, Rang 2 fuer Schwarz). Bei
+        // weit zurueckstehendem Bauern (z. B. h2) ist noch alles offen —
+        // ohne diese Schranke meldete die Erkennung schon dort Remis
+        // (Fehlalarm 08.10.2026: Ke4/Ld6/Ph2 vs Kf1 = sofort 0.00).
+        let prank = pawn_sq >> 3;
+        if (pawn_color == WHITE && prank != 6) || (pawn_color != WHITE && prank != 1) {
+            return false;
+        }
         // Promotion square and its color: a8 light / h8 dark for White,
         // a1 dark / h1 light for Black ((file + rank) & 1, a1 dark = 0).
         let promo: u8 = match (pf, pawn_color) {
@@ -951,11 +960,13 @@ impl Board {
         if b_color == promo_color {
             return false; // right bishop: promotion can be forced
         }
-        // Defender (bare king) holds the corner?
+        // Defender (bare king) holds the corner? Exakt: Das
+        // Umwandlungsfeld muss vom Verteidiger besetzt sein — sonst wandelt
+        // der Angreifer einfach um (h1=N/D aus leerer Ecke ist theoretisch
+        // gewinnbar, K+L+S-Matt existiert). Die alte Naehe-Wache (Abstand
+        // <= 2) meldete dort faelschlich Remis (Kg1 neben h1, Kf1 neben h1).
         let dk = self.king[opp(pawn_color) as usize];
-        let df = (file_of(dk) - file_of(promo)).abs();
-        let dr = (rank_of(dk) - rank_of(promo)).abs();
-        df <= 2 && dr <= 2
+        dk == promo
     }
 
     // --- perft ----------------------------------------------------------------
@@ -1094,9 +1105,17 @@ mod tests {
         // Verteidiger fern der Ecke (Ke8, Abstand 3 zu h8) -> kein
         // Sofort-Remis, damit Taktik (z. B. h7-h8) sichtbar bleibt.
         assert!(!Board::from_fen("4k3/8/8/8/4B3/8/7P/3K4 w - - 0 1").unwrap().wrong_bishop_draw());
-        // Schwarzer Angreifer gespiegelt: Umwandlung h1 hell, falscher
-        // Laeufer = dunkel (d4), Weiss haelt die Ecke (Kg1).
-        assert!(Board::from_fen("8/8/8/8/3b4/8/7p/6K1 b - - 0 1").unwrap().wrong_bishop_draw());
+        // Schwarzer Angreifer, Ecke NICHT besetzt (Kg1 neben leerem h1):
+        // kein Sofort-Remis — nach h1=N/D spielt Schwarz auf Gewinn
+        // (K+L+S-Matt existiert theoretisch; Konvertierungsschwaeche bei
+        // kleinen Knoten bleibt separat offen, 9.20/9.22). Korrektur
+        // 08.10.2026: diese Stellung galt seit 06.10. faelschlich als
+        // Festung (Naehe-Wache statt Besetzt-Bedingung).
+        assert!(!Board::from_fen("8/8/8/8/3b4/8/7p/6K1 b - - 0 1").unwrap().wrong_bishop_draw());
+        // Fehlalarm-FEN (Bauer h2, Umwandlungsfeld h1 leer): kein
+        // Sofort-Remis (Fehlalarm 08.10.2026 — Ke4/Ld6/Ph2 vs Kf1
+        // meldete 0.00 statt Mehrmaterial; jetzt h2h1q Matt in 4).
+        assert!(!Board::from_fen("8/8/3b4/8/4k3/8/7p/5K2 b - - 0 1").unwrap().wrong_bishop_draw());
         // Extramaterial (Turm) -> kein Fall dafuer.
         assert!(!Board::from_fen("7k/7P/4K3/8/4B3/8/8/R7 w - - 0 1").unwrap().wrong_bishop_draw());
         // Springer statt Laeufer -> kein Fall dafuer.

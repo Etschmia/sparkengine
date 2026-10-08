@@ -57,6 +57,11 @@ Laufend: nichts (alle Jobs beendet). Kein Langlauf ohne expliziten Auftrag.
   ohne neues Signal (stärkere Daten, andere Zielfunktion).
 - Zeitmanagement: nur gezielte Verlängerung bei Eval-Sprüngen; Blunder waren
   keine Zeitnot (außer 60+0 Martuni). Schwächster Hebel hier.
+  **Vermessen 08.10. (M11 −2 pari, offen, kein Kandidat):** V_TM1 (einmalig
+  +1 Basis bei Drop >80 cp, Tiefe ≥6, nur Uhr) misst exakt pari
+  (100,5:99,5, CI −32…+35, Tiefe 12:12, 0 Flags). Kapitel vorerst zu —
+  Wiederaufnahme nur mit neuer Idee (Schwelle/Mehrfach/Bestmove-Trigger),
+  nicht mit denselben Parametern.
 - Remis-Vorausschau (06.10., MESSERGEBNISSE 9.20/§6): 50-Züge nur als
   eingetreten gewertet (keine Annäherungs-Dämpfung), kein Remis-Angebot/Claim
   (UCI/Bridge aus) — plus Nebenbefund K+L+S-Konvertierung bei kleinen Knoten

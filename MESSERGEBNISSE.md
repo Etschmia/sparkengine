@@ -751,3 +751,71 @@ gewertet, keine Annäherungs-Dämpfung), Remis-Angebot/Claim (UCI sendet
 keins, Bridge-`offer_draw_enabled: false` bleibt — Partien enden durch Matt
 oder Server-Adjudikation; hätte hier ohnehin nicht gegriffen, da der Score
 falsch positiv war).
+
+### 9.21 Zeitmanagement V_TM1 + Match M11 (07./08.10.2026, beauftragt, gemessen)
+
+Motiv: ROADMAP-Hebel „gezielte Verlängerung bei Eval-Sprüngen" (schwächster
+Hebel — Blunder waren keine Zeitnot). Implementierung (`src/search.rs`, eigene
+Schwellen nach Lehrbuch-Idee, nach der Messung revertiert — Baum sauber):
+neue Felder `base_ms`/`time_extended`; `compute_time` merkt sich die
+unveränderte Basis (Rest/25+Ink/2 bzw. Rest/movestogo+Ink/2); `id_loop`
+verlängert nach vollendeter Iteration einmalig auf `min(hard, jetzt+Basis)`,
+wenn nur Uhr (movetime/nodes/depth/infinite ausgenommen), Tiefe ≥ 6, beide
+Scores keine Mattwerte, Drop = Vorgänger−Aktuell > 80 cp. Tests 20/20,
+0 Warnungen, Perft 5 = 4865609, Bench bit-identisch (178955/413880/41507).
+Binaries flüchtig (`/tmp/opencode/funken-tm1` vs. `-base-tm`); Precheck-pre
+per Design ausgenommen (Bench identisch — nur Uhr geändert, wie M10/Buch;
+md5s + Funktionsnachweis in `PRECHECK.log`). Funktionsnachweis an Drop-FEN
+`r1b1k2r/p2qppbp/2p3p1/8/1P2BBn1/N1P2Q2/P4PPP/R4K1R b kq - 0 18`
+(d6 −137 → d7 −219 = 82): Basis 245/247 ms, TM1 421/427 ms (+~80 %, unter
+Hard 960), +1 Ply, bestmove identisch. Sondierung: nur ~1/20
+Mittelspiel-Stellungen mit Drop > 80 — die Erweiterung feuert selten.
+
+- **M11 Basis vs. V_TM1, 200 Partien Uhr 30+0,3** (100 Farbtausch-Paare aus
+  Zufallsopenings, 6 Halbzüge, Seed 110, Treiber `/tmp/opencode/match_clock_tm1.py`,
+  PGNs `~/engine-arena/match-tm1-30s/`, POST 100 Paare/0 identisch OK): aus
+  Basis-Sicht **100,5 : 99,5 (+49 =103 −48), 50,2 %, Elo +2,
+  CI −32…+35, LOS 54,0 %** → Variante −2, **exakt pari = offen**.
+  Nebenbefunde: Tiefe 12 vs. 12 (die seltene Extension kostet im Median keinen
+  Ply), keine einzige Zeitüberschreitung (0× time forfeit), Enden 101×
+  repetition / 98× normal / 1× 50-Züge-Regel. Keine Übernahme.
+- Einordnung: Der schwächste Hebel misst wie erwartet pari — die Erweiterung
+  wirkt selten (per Konstruktion) und der Mehr-Ply im Drop-Fall schlägt im
+  Uhr-Selbstspiel nicht durch. Status **offen, nicht tot** (Regel): keine
+  Variante wird wegen „n = 200 pari" verworfen — Wiederaufnahme nur mit neuer
+  Idee (z. B. andere Schwelle, Mehrfach-Extension, Bestmove-Wechsel als
+  Trigger), nicht mit denselben Parametern.
+
+### 9.22 Falscher-Läufer-Fehlalarm + Besetzt-Bedingung (08.10.2026, gemessen)
+
+Anlass: 9.20-Nebenbefund (K+L+S-Konvertierung) neu geprüft — die Stellung vor
+`h1=N` (`8/8/3b4/8/4k3/8/7p/5K2 b`, Ke4/Ld6/Ph2 vs Kf1) meldete **sofort
+0.00** (Wurzel-Sofort-0, 10 Knoten), obwohl Schwarz klar besser steht. Ursache:
+`wrong_bishop_draw` (06.10.) prüfte nur Verteidigerkönig-Nähe zur Ecke
+(Abstand ≤ 2), nicht ob die Festung überhaupt besteht — bei leerem
+Umwandlungsfeld wandelt der Angreifer einfach um (h1=N/D danach theoretisch
+gewinnbar, K+L+S-Matt existiert). Fehlalarm maskierte sogar ein Matt.
+
+Fix (eigener Code, `src/chess.rs`): Festung nur bei Bauer auf vorletzter
+Reihe (Rang 7/2) UND vom Verteidiger **besetztem** Umwandlungsfeld. Damit
+fällt auch der 06.10.-Testfall `Kg1 neben leerem h1` als Festung (war
+theoretisch nie remis — Test korrigiert mit Begründung; Konvertierung bei
+kleinen Knoten bleibt separat offen).
+
+Verifikation (ausgeführt): `cargo test` 20/20 (1 Test korrigiert, 1 neuer
+Assert), Release-Build 0 Warnungen, Perft 5 = 4865609, Bench bit-identisch
+(178955/413880/41507). Partie-FEN (h7, Kh8 besetzt) weiter `cp 0`;
+Fehlalarm-FEN jetzt `h2h1q` mit **Matt in 4** (statt 0.00); Selbstspiel
+neu/neu (`-n 50000`, PGN flüchtig `/tmp/wb-fix.pgn`) → **0-1 Matt nach
+7 Halbzügen** (statt Wiederholungsremis).
+
+Kein Stärke-Match (≥200): Precheck-pre bricht per Design ab (Bench
+identisch — wie 9.20: die Änderung greift nur in einer Endspielklasse, die
+aus Zufallsopenings praktisch nie entsteht). Status: **Bugfix mit
+Test-/Partie-Beleg, kein Stärke-Plus behauptet.** Commit auf Auftrag.
+
+Offen im Topic Remis-Vorausschau: 50-Züge-Annäherungs-Dämpfung (nur
+`half >= 100` gewertet) als eigenes Experiment mit Messung; Remis-Angebot/
+Claim bleibt aus (UCI sendet keins, Bridge-`offer_draw_enabled: false` —
+Protokoll-Thema, kein Such-Hebel; hätte in 2wzlFoDU ohnehin nicht
+gegriffen, da der Score falsch positiv war).
