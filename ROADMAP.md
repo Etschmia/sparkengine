@@ -67,6 +67,11 @@ Laufend: nichts (alle Jobs beendet). Kein Langlauf ohne expliziten Auftrag.
   (UCI/Bridge aus) — plus Nebenbefund K+L+S-Konvertierung bei kleinen Knoten
   (h1=N korrekt, danach nicht konvertiert). Je Feature eigene Entscheidung
   mit Messung.
+  **08.10.:** WB-Fehlalarm gefixt+committet (`9ec7c2c`, 9.22 — leere Ecke
+  maskierte Matt in 4); V_FD1-Dämpfung als Kandidat verworfen (9.23 —
+  Sonden höchstens marginal, kein Match per Konstruktion pari).
+  Offen: wurzelnäherer Dämpfungsansatz (nur mit neuer Idee), K+L+S-
+  Konvertierung, Remis-Claim (Protokoll-Thema).
 
 ## Mess-Regeln (nicht verhandelbar)
 

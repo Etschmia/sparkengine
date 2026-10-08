@@ -819,3 +819,29 @@ Offen im Topic Remis-Vorausschau: 50-Züge-Annäherungs-Dämpfung (nur
 Claim bleibt aus (UCI sendet keins, Bridge-`offer_draw_enabled: false` —
 Protokoll-Thema, kein Such-Hebel; hätte in 2wzlFoDU ohnehin nicht
 gegriffen, da der Score falsch positiv war).
+
+### 9.23 50-Züge-Dämpfung V_FD1 (08.10.2026, Mikro-Diagnose, verworfen)
+
+Versuch: `fifty_damp` in `src/search.rs` (nach der Messung revertiert —
+Baum sauber): ab Halbzug 80 wird der Seiten-Sicht-Score an zwei Stellen
+(QS-Standpat, Negamax-Statik) linear gegen 0 skaliert (Faktor
+(100−half)/20; Mattwerte ausgenommen; `half >= 100` und Wurzel-Sofort-0
+unverändert). Eigene Schwellen nach Lehrbuch-Idee. Binaries flüchtig
+(`/tmp/opencode/funken-fd1` vs. `-base-fd`). Tests 20/20, 0 Warnungen,
+Bench bit-identisch (Uhr 0 in Bench-Stellungen), Perft 4865609.
+
+Sonden (frisch, `go depth`, Basis vs. FD1): Kiwipete half=85 d10 identisch
+(−53, gleiche PV — Gewinnlinien resetten die Uhr sofort, Dämpfung
+greift ins Leere); Bauernendspiel half=75 d10 identisch (+405, exakte
+Knotengleichheit); Bauernendspiel half=95 d12 marginal (+473 vs. +461,
+PV-Divergenz ab Zug 7, +2 % Knoten). Mechanismus existiert, wirkt aber nur
+als leichte PV-Modulation bei fast abgelaufener Uhr.
+
+Kein Match angesetzt (≥200): Hoch-half-Lagen entstehen aus
+Zufallsopenings praktisch nie (M11: 1× 50-Züge in 200 Partien) — ein
+Selbstspiel mäße per Konstruktion pari. Status: **verworfen als Kandidat,
+offen als Hebel** (nicht-signifikant-Regel greift nicht — es gab gar keine
+Messung, nur Mikro-Diagnose). Lehre: Blatt-Dämpfung verpufft, weil
+Gewinn-PVs die Uhr zurücksetzen und Drift-Linien bei `half >= 100` ohnehin
+exakt 0 melden; ein künftiger Ansatz müsste wurzelnäher ansetzen. Keine
+Übernahme, kein Commit der Variante.
