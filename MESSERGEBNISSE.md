@@ -23,7 +23,7 @@ Befehl: `./target/release/funken perft <tiefe> [fen]`.
 
 Perft-Leistung: ca. 5–14 Mio. Knoten/s (VM-lastabhängig).
 
-## 2. Unit-Tests: `cargo test` — 20/20 ✅ (ausgeführt)
+## 2. Unit-Tests: `cargo test` — 24/24 ✅ (ausgeführt)
 
 Schachkern: FEN-Roundtrip, Hash-Stabilität unter make/unmake (inkrementell ==
 rekomputiert), Startpos-Perft 1–3, **En-passant-Fesselung** (illegaler EP-Schlag
@@ -45,7 +45,9 @@ Wiederholungssequenz; getestet wird die Zählschwelle, nicht der
   Partieverlauf), **wiederverwendete TT sucht die Wurzel neu**
   (Tiefe 4 nach Tiefe 4 mit derselben TT: volle Knotenzahl, PV konsistent),
 **falscher Läufer = 0** (Partie-Nähe K+L+h-Bauer vs K: Score 0 statt +6;
-richtiger Läufer bei gedecktem Bauern weiter klar positiv, Tiefe 6).
+richtiger Läufer bei gedecktem Bauern weiter klar positiv, Tiefe 6),
+**KBN-Führung** (exakt K+L+S vs K: Bonus positiv, farb-symmetrisch exakt
+negiert, Eck-Maximum 104, Startpos/K+S/KBB/KBN-vs-Mehrfigur je 0).
 
 ## 3. UCI + Zeitmanagement (ausgeführt, Treiber `tests_ucitool.py`)
 
@@ -167,8 +169,8 @@ beweist weder Spielstärke noch Schadensfreiheit des Fix.
 - 50-Züge-Vorausschau: nur `half >= 100` als eingetreten gewertet (9.20);
   Annäherungs-Dämpfung und Remis-Angebot/Claim bleiben deaktiviert
   (UCI kennt keins, Bridge-`offer_draw_enabled: false`).
-- K+L+S-Konvertierung bei kleinen Knoten (Nebenbefund 9.20: nach korrektem
-  `h1=N` bei 50k nicht konvertiert) — als eigenes Experiment mit Messung.
+- K+L+S-Konvertierung: **übernommen 09.10.2026** (`kbn_guide`, 9.25 —
+  Bugfix mit Beleg, kein Stärke-Plus behauptet).
 
 ## 7. Lichess-Anbindung: Validierungsstand (ausgeführt, ohne Token)
 
@@ -845,3 +847,81 @@ Messung, nur Mikro-Diagnose). Lehre: Blatt-Dämpfung verpufft, weil
 Gewinn-PVs die Uhr zurücksetzen und Drift-Linien bei `half >= 100` ohnehin
 exakt 0 melden; ein künftiger Ansatz müsste wurzelnäher ansetzen. Keine
 Übernahme, kein Commit der Variante.
+
+### 9.24 Buch-Ära-Blunderschnitt + K+L+S-Repro (09.10.2026, Diagnose, gemessen)
+
+Daten: 360 Lichess-Partien seit Buch-v1-Stichtag (01.10.2026, `published_since`
+in `status.json`), 482 Blunder (Analyse-Engine SF 17.1/T17 wie bisher).
+Spiel-Sicht-Join wie 9.6 (PGN-`[%eval]` Weiß-Sicht → Eigen-Sicht, `[%clk]`;
+Treiber ad hoc, Join-Tabelle flüchtig `/tmp/opencode/buchera_join.json`):
+468/482 zugeordnet.
+
+- **Bilanz:** Score 48,5 % (174/359 gewertet) bei Elo 2097 vs. Gegner 2114
+  (Gen4-Ära 29.09.: 55,8 % bei 2062 vs. 2092 — Gegner +~20, Score −7 Punkte).
+- **Rate:** 1,34/Spiel (482/360), ohne Matt-Fälle (77 mit loss ≥ 2000):
+  1,13 vs. Gen4-Ära 1,09/0,91 — leicht hoch, kein Buch-Wunder in der Rate.
+- **Schwere flach:** Wahnmaß-Median 258 cp (Gen4: 277), p90 573.
+  Zeitnot weiter widerlegt (Tiefe median 13, Restzeit median 64 s, 11/468 <15 s).
+- **Muster:** entscheidend (Gewinn→weg/Remis→Verlust, loss < 2000) 121 Fälle;
+  Motive missed_capture 21, positional_collapse 14, hangs_bishop 11,
+  exposed_king 10. Phasen: Mittelspiel 97/121 (80 %), Eröffnung 14, Endspiel 10.
+  Eröffnungsanteil gesamt nur 38/482 (7,9 %) — Buch v1 drückt den
+  Eröffnungs-Blunder wie konstruiert (M10-Nuance Weiß-Repertoire bleibt v2).
+- **K+L+S-Repro (offener Nebenbefund 9.20):** Stellung nach `h1=N`
+  (`8/8/3b4/8/4k3/8/8/5K1n w - - 0 1`, KBN-vs-K-Gewinnseite nicht am Zug —
+  Sondierung der Halteseite): Funken meldet −740 (korrekt verloren aus
+  Verteidigersicht), PV bis 1M Knoten (d13) reines Springer-Shuffle ohne
+  Matt-Ansage. Die Gewinnseite konvertiert bei Spiel-Budgets nicht — der
+  Befund „KBN wird bei 50k nicht konvertiert" gilt bis 1M. Mechanismus:
+  keine Mattführung in Eval/Suche (KBN-Matt braucht ~30+ Züge gezielte
+  Eckführung); Wiederholungsgefahr aus Gewinnstellungen bleibt.
+- Einordnung: Das dominante Bild (Mittelspiel, ruhige 200-cp-Sequenzen,
+  hängende Figuren) ist das bekannte QS-Blindheits-Bild aus 9.15 — M7–M9
+  haben gezeigt, dass billige QS-Varianten es bei festen Knoten nicht heben.
+  K+L+S ist dagegen klein, klar umrissen und gezielt messbar (Konvertierung
+  aus KBN-Stellungen statt aus Zufallsopenings) — als Bugfix mit Beleg,
+  ohne Stärke-Plus-Behauptung (Häufigkeit ~1 Fall/600 Partien).
+
+### 9.25 K+L+S-Mattführung V_KBN (09.10.2026, beauftragt, übernommen)
+
+Implementierung (eigener Code, Lehrbuch-Idee, `src/eval.rs`): `kbn_guide`
+feuert nur bei exakt K+L+S vs blankem König (jede Angriffsfarbe): Der
+Verteidigerkönig wird in die passende Ecke gedrängt (Eckenfarbe =
+Läuferfarbe, Ziel die nähere der beiden passenden Ecken; 12 cp/Distanz),
+der Angreiferkönig an den Verteidiger herangeführt (10 cp/Distanz), max
+154 cp weiß-relativ neben ~+650 Material — nur Ordnung unter Gewinnwegen,
+Matt-Scores dominieren weiter. Keine Suchkosten (reine Eval-Führung).
+
+Verifikation (ausgeführt): `cargo test` 24/24 (4 neue Tests: Vorzeichen,
+Farb-Symmetrie exakt negiert, Eck-Maximum 104, nur-exakter-Fall mit
+Startpos/K+S/KBB/KBN-vs-Mehrfigur je 0), Release-Build 0 Warnungen,
+Perft 5 = 4865609, Bench bit-identisch zur Basis (178955/413880/41507,
+gleiche Scores/PVs — außerhalb KBN unverändert).
+
+Messung (Konvertierungsrate aus KBN-Stellungen, Selbstspiel gleiche Engine,
+frischer Prozess je Partie, Abbruch bei Matt/Patt/50-Zügen/3-facher
+Wiederholung, sonst adjudicated nach 200 HZ; Treiber `/tmp/opencode/
+match_kbn.py`, 10 Hand-/Zufallsstellungen × Farb-Flip = 20, legal
+verifiziert, Gewinner am Zug; Binaries `/tmp/opencode/funken-kbn` vs.
+`-base-kbn`):
+
+| Budget/Zug | Basis | Variante |
+|---|---|---|
+| 50k (Spiel) | 0/6 | 0/6 |
+| 200k | 1/6 | 0/6 |
+| 1M (Analyse) | 2/20 | **5/20** (u. a. 2× Matt in 9 aus Stellungen, die Basis remis hält) |
+
+Ehrliche Einordnung: Tendenz, nicht signifikant (5 vs 2 bei n = 20 ist
+Rauschen-kompatibel); bei Spiel-Budget konvertiert auch die Variante
+nicht — KBN-Matt in ~30 Zügen liegt jenseits des Blitz-Horizonts, die
+Führung ändert daran nichts. Übernahme trotzdem als **Bugfix mit Beleg
+(WB-Präzedenz 9.20/9.22), kein Stärke-Plus behauptet**: Null-Kosten
+(Bench/Tiefe unverändert, feuert nur in exakt KBN), Mechanismus belegt
+(2 zusätzliche Matts aus Basis-Remisstellungen bei 1M), Schaden
+ausgeschlossen per Konstruktion (nur Ordnung unter Gewinnwegen).
+Häufigkeit im Spiel ~1 Fall/600 Partien — kein Elo-Effekt erwartbar,
+deshalb kein 200er-Match (mäße per Konstruktion pari wie WB).
+
+Kein Stärke-Match (≥200): Precheck-pre bräche per Design ab (Bench
+identisch — wie 9.20/WB: die Änderung greift nur in einer Endspielklasse,
+die aus Zufallsopenings praktisch nie entsteht).

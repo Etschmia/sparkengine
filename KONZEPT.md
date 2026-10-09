@@ -84,6 +84,10 @@ Endspiel nach unbereinigtem Figurenmaterial (eigene Phasengewichte N/B=1, R=2, Q
 - Eigene Struktur-/Positionsboni: Läuferpaar, Doppel-/Isolani-/Freibauern
   (fortschrittsabhängig), offene/halboffene Turmlinien, König-Bauernschild,
   Mobilität (N/B/R/Q-gewichtet), Tempo-Bonus.
+- K+L+S-Mattführung (Bugfix-Klasse, kein Stärke-Plus): exakt K+L+S gegen
+  blanken König erhält ≤154 cp Richtungsbonus (Verteidiger in die passende
+  Ecke, Angreiferkönig heran) — sonst spielt die Suche Gewinnstellungen
+  remis (Messung `MESSERGEBNISSE.md` 9.25).
 
 Keine trainierten Netze, keine fremden Labels — bewusst, weil Datenerzeugung und
 Training mit den verfügbaren Ressourcen nicht seriös umsetzbar wären.

@@ -70,8 +70,11 @@ Laufend: nichts (alle Jobs beendet). Kein Langlauf ohne expliziten Auftrag.
   **08.10.:** WB-Fehlalarm gefixt+committet (`9ec7c2c`, 9.22 — leere Ecke
   maskierte Matt in 4); V_FD1-Dämpfung als Kandidat verworfen (9.23 —
   Sonden höchstens marginal, kein Match per Konstruktion pari).
-  Offen: wurzelnäherer Dämpfungsansatz (nur mit neuer Idee), K+L+S-
-  Konvertierung, Remis-Claim (Protokoll-Thema).
+  **09.10.:** KBN-Führung V_KBN als Bugfix übernommen+committet (9.25 —
+  24/24 Tests, Bench/Perft unverändert, 5/20 vs 2/20 Matts bei 1M,
+  Tendenz n.s., kein Elo-Plus behauptet).
+  Offen: wurzelnäherer Dämpfungsansatz (nur mit neuer Idee),
+  Remis-Claim (Protokoll-Thema).
 
 ## Mess-Regeln (nicht verhandelbar)
 

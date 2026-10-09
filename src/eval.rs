@@ -359,6 +359,90 @@ pub fn build_tables(p: &EvalParams) -> Tables {
     t
 }
 
+// --- K+B+N vs bare K mating guidance (own heuristic, textbook idea) ---
+// Without steering the search shuffles for dozens of moves at game budgets
+// (9.24: no mate to 1M nodes in a KBN position) and risks repetition draws
+// from a won position. Two classic steering terms: drive the defender
+// towards the mating corner (whose square color matches the bishop) and
+// pull the attacker king towards the defender. Small (<=154 cp) beside a
+// +600 position: it only orders winning moves, never flips the assessment.
+// Applies only to exact K+B+N vs bare K (either color attacking).
+const KBN_CORNER_W: i32 = 12;
+const KBN_KING_W: i32 = 10;
+
+fn cheby(a: u8, b: u8) -> i32 {
+    let df = (file_of(a) - file_of(b)).abs() as i32;
+    let dr = (rank_of(a) - rank_of(b)).abs() as i32;
+    df.max(dr)
+}
+
+/// White-relative KBN guidance bonus, 0 unless exactly K+B+N vs bare K.
+fn kbn_guide(b: &Board) -> i32 {
+    let mut wb = 0;
+    let mut wn = 0;
+    let mut wother = 0;
+    let mut bb = 0;
+    let mut bn = 0;
+    let mut bother = 0;
+    let mut wb_sq = 0u8;
+    let mut bb_sq = 0u8;
+    for s in 0..64usize {
+        let pc = b.sq[s];
+        if pc == EMPTY || type_of(pc) == 5 {
+            continue;
+        }
+        let c = color_of(pc);
+        match type_of(pc) {
+            2 => {
+                if c == WHITE {
+                    wb += 1;
+                    wb_sq = s as u8;
+                } else {
+                    bb += 1;
+                    bb_sq = s as u8;
+                }
+            }
+            1 => {
+                if c == WHITE {
+                    wn += 1;
+                } else {
+                    bn += 1;
+                }
+            }
+            _ => {
+                if c == WHITE {
+                    wother += 1;
+                } else {
+                    bother += 1;
+                }
+            }
+        }
+    }
+    let white_attacks = wb == 1 && wn == 1 && wother == 0 && bb == 0 && bn == 0 && bother == 0;
+    let black_attacks = bb == 1 && bn == 1 && bother == 0 && wb == 0 && wn == 0 && wother == 0;
+    if !white_attacks && !black_attacks {
+        return 0;
+    }
+    let (att_king, def_king, bsq, sign) = if white_attacks {
+        (b.king[WHITE as usize], b.king[BLACK as usize], wb_sq, 1)
+    } else {
+        (b.king[BLACK as usize], b.king[WHITE as usize], bb_sq, -1)
+    };
+    // Mating corner matches the bishop's square color: a1/h8 are dark (0),
+    // h1/a8 are light (1). Square indices: a1=0, h1=7, a8=56, h8=63.
+    let bcol = (file_of(bsq) + rank_of(bsq)) & 1;
+    let corners = if bcol == 0 { [0u8, 63u8] } else { [7u8, 56u8] };
+    // Steer towards the nearer matching corner (no corner-switch confusion).
+    let target = if cheby(def_king, corners[0]) <= cheby(def_king, corners[1]) {
+        corners[0]
+    } else {
+        corners[1]
+    };
+    let corner_term = (7 - cheby(def_king, target)) * KBN_CORNER_W;
+    let king_term = (7 - cheby(att_king, def_king)) * KBN_KING_W;
+    sign * (corner_term + king_term)
+}
+
 pub fn evaluate(b: &Board) -> i32 {
     if let Some((p, t)) = override_params() {
         evaluate_with(b, p, t)
@@ -599,4 +683,54 @@ pub fn evaluate_with(b: &Board, p: &EvalParams, t: &Tables) -> i32 {
     let ph = phase.min(MAX_PHASE);
     (mg * ph + eg * (MAX_PHASE - ph)) / MAX_PHASE
         + if b.side == WHITE { p.tempo } else { -p.tempo } // own tempo bonus
+        + kbn_guide(b) // K+B+N mating steer (0 unless exact KBN vs bare K)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn kbn_guide_white_attacks() {
+        // Weiss KBN vs blanker Koenig: Führung positiv und klein (<=154).
+        let b = Board::from_fen("8/8/3B4/8/4K3/8/8/5k1N w - - 0 1").unwrap();
+        let g = kbn_guide(&b);
+        assert_eq!(g, 64, "guide = {g}"); // (7-5)*12 + (7-3)*10
+        assert!(g > 0 && g <= 7 * KBN_CORNER_W + 7 * KBN_KING_W);
+        // Material dominiert weiter: klar gewonnen, kein Matt-Phantom.
+        assert!(evaluate(&b) > 400, "eval = {}", evaluate(&b));
+    }
+
+    #[test]
+    fn kbn_guide_black_mirrors_white() {
+        // Gleiche Geometrie in Schwarz: exakt negiert (kein Farb-Bias).
+        let w = Board::from_fen("8/8/3B4/8/4K3/8/8/5k1N w - - 0 1").unwrap();
+        let b = Board::from_fen("8/8/3b4/8/4k3/8/8/5K1n w - - 0 1").unwrap();
+        assert_eq!(kbn_guide(&b), -kbn_guide(&w));
+        assert!(evaluate(&b) < -400);
+    }
+
+    #[test]
+    fn kbn_guide_cornered_defender() {
+        // Verteidiger schon in der passenden Ecke (dunkler Laeufer, h8):
+        // Eck-Term maximal (7-0)*12.
+        let b = Board::from_fen("7k/8/2K5/8/3B4/8/8/4N3 w - - 0 1").unwrap();
+        assert_eq!(kbn_guide(&b), 84 + 20, "guide = {}", kbn_guide(&b));
+    }
+
+    #[test]
+    fn kbn_guide_off_unless_exact() {
+        // Startpos, K+S vs K (ungenuegend, kein KBN), KBN vs K+Mehrfigur,
+        // KBB vs K: überall 0 — die Führung feuert nur im exakten Fall.
+        assert_eq!(kbn_guide(&Board::startpos()), 0);
+        for fen in [
+            "8/8/4k3/8/8/3N4/8/4K3 w - - 0 1",     // K+S vs K
+            "8/8/3b4/8/4k3/8/7p/5K1N w - - 0 1",   // KBN vs K+Bauer
+            "7k/8/8/4B3/8/8/5B1K/8 w - - 0 1",     // KBB vs K
+            "8/8/3b4/8/4k3/8/8/5K2 w - - 0 1",     // nur KL vs K
+        ] {
+            let b = Board::from_fen(fen).unwrap();
+            assert_eq!(kbn_guide(&b), 0, "{fen}");
+        }
+    }
 }
